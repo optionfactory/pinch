@@ -1,0 +1,393 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PinchManifest",
+  "type": "object",
+  "properties": {
+    "auto_restart": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "auto_start": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "docker_networks": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "$ref": "#/$defs/DockerNetworkConfig"
+      }
+    },
+    "grace_period": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0
+    },
+    "layout": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/LayoutBlock"
+      }
+    },
+    "logs_max_size": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint",
+      "minimum": 0
+    },
+    "processes": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "$ref": "#/$defs/ProcessManifest"
+      }
+    },
+    "project": {
+      "$ref": "#/$defs/ProjectManifest"
+    },
+    "shell": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "vars": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "watch_settle_time_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "project"
+  ],
+  "$defs": {
+    "DockerNetworkConfig": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "args": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "string"
+              }
+            },
+            "subnet": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "subnet"
+          ]
+        }
+      ]
+    },
+    "LayoutBlock": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "edge": {
+          "$ref": "#/$defs/LayoutEdge"
+        },
+        "size_percentage": {
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        },
+        "splits": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/LayoutSplit"
+          }
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unassigned": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "edge",
+        "size_percentage"
+      ]
+    },
+    "LayoutEdge": {
+      "type": "string",
+      "enum": [
+        "top",
+        "bottom",
+        "left",
+        "right"
+      ]
+    },
+    "LayoutSplit": {
+      "type": "object",
+      "properties": {
+        "size_percentage": {
+          "type": "integer",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "unassigned": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "size_percentage"
+      ]
+    },
+    "PaneMode": {
+      "type": "string",
+      "enum": [
+        "log",
+        "tui"
+      ]
+    },
+    "ProcessManifest": {
+      "type": "object",
+      "properties": {
+        "auto_restart": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "auto_start": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "cwd": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "grace_period": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        },
+        "link": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "mode": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PaneMode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "run": {
+          "$ref": "#/$defs/RunManifest"
+        },
+        "title": {
+          "type": "string"
+        },
+        "watch": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "watch_settle_time_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "run"
+      ]
+    },
+    "ProjectManifest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "name"
+      ]
+    },
+    "RunKind": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "bash": {
+              "type": "boolean",
+              "default": false
+            },
+            "cmd": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "process"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "cmd"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "args": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "image": {
+              "type": "string"
+            },
+            "opts": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "docker"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "image"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "bash": {
+              "type": "boolean",
+              "default": false
+            },
+            "cmd": {
+              "type": "string"
+            },
+            "ip": {
+              "type": "string"
+            },
+            "network": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "type": {
+              "type": "string",
+              "const": "docker-intrude"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "ip",
+            "cmd"
+          ]
+        }
+      ]
+    },
+    "RunManifest": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/RunKind"
+        }
+      ]
+    }
+  }
+}

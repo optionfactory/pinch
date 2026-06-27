@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
+project:
+   name: "An example dashboard"
+processes:
+  - title: "System Monitor"
+    run: "top"
+    mode: "tui"
+  - title: "CPU & Mem Stats"
+    run: "vmstat 1"
+  - title: "Network Ping"
+    run: "ping 8.8.8.8"
+  - title: "Disk Usage"
+    run: "watch -n 5 df -h"
+    mode: "tui"
+  - title: "Simulated Service"
+    run: "bash -c 'while true; do echo \"[Service] Processing task $RANDOM...\"; sleep 1.5; done'"
+layout:
+  # 1. Carve out the left 35% of the screen.
+  # Stack our primary system monitors vertically.
+  - edge: "left"
+    size_percentage: 35
+    direction: "vertical"
+    splits:
+      - title: "System Monitor"
+        size_percentage: 60
+      - title: "CPU & Mem Stats"
+        size_percentage: 40
+  # 2. Carve out the bottom 30% of the REMAINING screen.
+  # Display logs side-by-side.
+  - edge: "bottom"
+    size_percentage: 30
+    direction: "horizontal"
+    splits:
+      - title: "Combined Logs" # The special global logs panel
+        size_percentage: 50
+      - title: "Simulated Service" # Our bash loop generating fake logs
+        size_percentage: 50
+  # 3. Unassigned Panes
+  # "Network Ping" and "Disk Usage" are not mentioned in the layout.
