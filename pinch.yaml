@@ -1,0 +1,14 @@
+title: "Pinging around"
+docker_network: "hi"
+vars: 
+  target: "8.8.8.8"
+  flags: "-c 10"
+processes:
+  - title: "Google DNS"
+    docker_ip: 172.18.23.100  
+    cmd: > 
+      ping {{ target }} {{ flags }}
+  - title: "Cloudflare"
+    cmd: > 
+      ping 1.1.1.1 {{ flags }}
+

@@ -1,0 +1,38 @@
+title: "An example dashboard"
+processes:
+  - title: "System Monitor"
+    cmd: "top"
+    mode: "tui"
+  - title: "CPU & Mem Stats"
+    cmd: "vmstat 1"
+  - title: "Network Ping"
+    cmd: "ping 8.8.8.8"
+  - title: "Disk Usage"
+    cmd: "watch -n 5 df -h"
+    mode: "tui"
+  - title: "Simulated Service"
+    cmd: "bash -c 'while true; do echo \"[Service] Processing task $RANDOM...\"; sleep 1.5; done'"
+layout:
+  # 1. Carve out the left 35% of the screen.
+  # Stack our primary system monitors vertically.
+  - edge: "left"
+    size_percentage: 35
+    direction: "vertical"
+    splits:
+      - title: "System Monitor"
+        size_percentage: 60
+      - title: "CPU & Mem Stats"
+        size_percentage: 40
+  # 2. Carve out the bottom 30% of the REMAINING screen.
+  # Display logs side-by-side.
+  - edge: "bottom"
+    size_percentage: 30
+    direction: "horizontal"
+    splits:
+      - title: "Combined Logs" # The special global logs panel
+        size_percentage: 50
+      - title: "Simulated Service" # Our bash loop generating fake logs
+        size_percentage: 50
+  # 3. Unassigned Panes
+  # "Network Ping" and "Disk Usage" are not mentioned in the layout.
+  # They will automatically share the remaining top-right area of the terminal.

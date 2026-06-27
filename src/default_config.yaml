@@ -1,0 +1,13 @@
+title: "Pinch Project"
+vars:
+  env: "dev"
+processes:
+  - title: "Backend"
+    cmd: "cargo run"
+    cwd: "{{pwd}}/backend"
+    watch:
+      - "{{ pwd }}/backend/src"
+  - title: "Frontend"
+    cmd: "npm run dev"
+    cwd: "{{ pwd }}/frontend"
+    mode: "tui"
