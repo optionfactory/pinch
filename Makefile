@@ -11,6 +11,9 @@ build-release:
 run:
 	cargo run
 
+install:
+	cp target/x86_64-unknown-linux-musl/release/pinch /usr/local/bin/pinch
+
 publish-github: build-release
 	$(eval version=$(shell cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version'))
 	$(eval github_token=$(shell echo url=https://github.com/$(REPO_OWNER)/$(REPO_NAME) | git credential fill | grep '^password=' | sed 's/password=//'))

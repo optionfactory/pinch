@@ -11,10 +11,14 @@ Download Pre-built Binaries (Linux) You can download the latest statically-linke
 or just run:
 
 ```bash
-curl -sSL https://github.com/optionfactory/pinch/releases/latest/download/pinch-amd64-linux-musl | sudo tee /usr/local/bin/pinch > /dev/null && sudo chmod +x /usr/local/bin/pinch
+curl -sSL \
+  https://github.com/optionfactory/pinch/releases/latest/download/pinch-amd64-linux-musl \
+  | sudo tee /usr/local/bin/pinch > /dev/null \
+  && sudo chmod +x /usr/local/bin/pinch
+  
 ```
 
-Using `docker_ip`, required `docker-intrude` to be installed.
+Using `docker_ip`, requires [`docker-intrude`](https://github.com/optionfactory/docker-intrude) to be installed.
 
 ## Build from Source
 Ensure you have Rust installed, then clone the repository and build:
@@ -23,6 +27,7 @@ Ensure you have Rust installed, then clone the repository and build:
 git clone https://github.com/optionfactory/pinch
 cd pinch
 make build-release
+sudo make install
 ```
 
 ## Usage
