@@ -55,6 +55,9 @@ impl App {
             global_area_height: 24,
             should_quit: false,
             layout: config.layout,
+            cached_geometries: Vec::new(),
+            last_grid_area: ratatui::layout::Rect::default(),
+            layout_dirty: true,
         };
 
         Self { state, ui_tx, logs_tx }
@@ -121,12 +124,20 @@ impl App {
             ])
             .split(full_area);
 
-        let geometries = crate::ui::layouts::compute_pane_geometries(
-            screen_chunks[1],
-            &self.state.panes,
-            self.state.zoomed_pane,
-            &self.state.layout,
-        );
+        let grid_area = screen_chunks[1];
+
+        if self.state.layout_dirty || self.state.last_grid_area != grid_area {
+            self.state.cached_geometries = crate::ui::layouts::compute_pane_geometries(
+                grid_area,
+                &self.state.panes,
+                self.state.zoomed_pane,
+                &self.state.layout,
+            );
+            self.state.last_grid_area = grid_area;
+            self.state.layout_dirty = false;
+        }
+
+        let geometries = self.state.cached_geometries.clone();
 
         for geo in geometries {
             if let crate::ui::layouts::PaneTarget::Process(proc_id) = geo.target {
@@ -167,6 +178,7 @@ impl App {
             }
             PinchEvent::Input(Event::Resize(_, rows)) => {
                 self.state.global_area_height = rows.saturating_sub(4) as usize;
+                self.state.layout_dirty = true;
             }
             PinchEvent::Input(_) => {}
             PinchEvent::LogLine(id, line) => {

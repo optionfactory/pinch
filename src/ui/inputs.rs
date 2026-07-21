@@ -43,31 +43,11 @@ pub fn handle_key(state: &mut AppState, key: KeyEvent) -> AppAction {
         return AppAction::None;
     }
 
-    let inner_height = if let Ok((width, height)) = crossterm::terminal::size() {
-        let full_area = ratatui::layout::Rect::new(0, 0, width, height);
-        let screen_chunks = ratatui::layout::Layout::default()
-            .direction(ratatui::layout::Direction::Vertical)
-            .constraints([
-                ratatui::layout::Constraint::Length(1),
-                ratatui::layout::Constraint::Min(0),
-                ratatui::layout::Constraint::Length(1),
-            ])
-            .split(full_area);
-
-        let geometries = crate::ui::layouts::compute_pane_geometries(
-            screen_chunks[1],
-            &state.panes,
-            state.zoomed_pane,
-            &state.layout,
-        );
-        geometries
-            .into_iter()
-            .find(|geo| geo.target == crate::ui::layouts::PaneTarget::Process(state.panes[state.focused_pane].id))
-            .map(|geo| geo.area.height.saturating_sub(2) as usize)
-            .unwrap_or(24)
-    } else {
-        24
-    };
+    let inner_height = state.cached_geometries
+        .iter()
+        .find(|geo| geo.target == crate::ui::layouts::PaneTarget::Process(state.panes[state.focused_pane].id))
+        .map(|geo| geo.area.height.saturating_sub(2) as usize)
+        .unwrap_or(24);
 
     let mut action = AppAction::None;
 
@@ -173,28 +153,9 @@ pub fn handle_mouse(state: &mut AppState, mouse_event: MouseEvent) -> AppAction 
     let mx = mouse_event.column;
     let my = mouse_event.row;
 
-    let (width, height) = match crossterm::terminal::size() {
-        Ok(size) => size,
-        Err(_) => return AppAction::None,
-    };
-
-    let full_area = ratatui::layout::Rect::new(0, 0, width, height);
-    let screen_chunks = ratatui::layout::Layout::default()
-        .direction(ratatui::layout::Direction::Vertical)
-        .constraints([
-            ratatui::layout::Constraint::Length(1),
-            ratatui::layout::Constraint::Min(0),
-            ratatui::layout::Constraint::Length(1),
-        ])
-        .split(full_area);
-    let grid_area = screen_chunks[1];
-
-    let geometries =
-        crate::ui::layouts::compute_pane_geometries(grid_area, &state.panes, state.zoomed_pane, &state.layout);
-
-    let clicked_geo = geometries.into_iter().find(|geo| {
+    let clicked_geo = state.cached_geometries.iter().find(|geo| {
         mx >= geo.area.x && mx < geo.area.x + geo.area.width && my >= geo.area.y && my < geo.area.y + geo.area.height
-    });
+    }).cloned();
 
     if let Some(geo) = clicked_geo {
         match geo.target {

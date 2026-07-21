@@ -53,6 +53,7 @@ pub enum PaneTarget {
     CombinedLogs,
 }
 
+#[derive(Debug, Clone)]
 pub struct PaneGeometry {
     pub target: PaneTarget,
     pub area: Rect,

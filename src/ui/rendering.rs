@@ -188,11 +188,8 @@ fn draw_process_pane(state: &AppState, frame: &mut Frame, area: Rect, pane_id: u
     }
 }
 
-fn draw_process_grid(state: &AppState, frame: &mut Frame, grid_area: Rect) {
-    let geometries =
-        crate::ui::layouts::compute_pane_geometries(grid_area, &state.panes, state.zoomed_pane, &state.layout);
-
-    for geo in geometries {
+fn draw_process_grid(state: &AppState, frame: &mut Frame, _grid_area: Rect) {
+    for geo in &state.cached_geometries {
         match geo.target {
             crate::ui::layouts::PaneTarget::CombinedLogs => {
                 draw_combined_logs(state, frame, geo.area);

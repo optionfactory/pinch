@@ -2,6 +2,8 @@ use crate::config::LayoutBlock;
 use crate::process::panes::ProcessPane;
 use ratatui::text::Line;
 use std::collections::VecDeque;
+use crate::ui::layouts::PaneGeometry;
+use ratatui::layout::Rect;
 
 pub struct AppState {
     pub title: String,
@@ -16,6 +18,10 @@ pub struct AppState {
     pub global_area_height: usize,
     pub should_quit: bool,
     pub layout: Vec<LayoutBlock>,
+
+    pub cached_geometries: Vec<PaneGeometry>,
+    pub last_grid_area: Rect,
+    pub layout_dirty: bool,    
 }
 
 impl AppState {
@@ -54,5 +60,6 @@ impl AppState {
 
     pub fn toggle_zoom(&mut self, id: usize) {
         self.zoomed_pane = if self.zoomed_pane == Some(id) { None } else { Some(id) };
+        self.layout_dirty = true;
     }
 }
