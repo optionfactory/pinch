@@ -7,11 +7,13 @@ mod state;
 mod ui;
 
 use app::App;
+use crossterm::event::EventStream;
 use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture};
 use crossterm::execute;
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use events::PinchEvent;
+use futures::StreamExt;
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::fs::File;
 use std::io::{self, BufReader, Write};
@@ -19,6 +21,7 @@ use std::panic;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::mpsc;
+use tokio::time::{Duration, interval};
 
 fn restore_terminal() {
     let mut stdout = io::stdout();
@@ -72,37 +75,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let tx_input = tx_ui.clone();
     let is_running_input = Arc::clone(&is_running);
-    let input_handle = std::thread::spawn(move || {
-        let mut last_tick = std::time::Instant::now();
+    let input_handle = tokio::spawn(async move {
+        let mut tick_interval = interval(Duration::from_millis(500));
+        let mut event_stream = EventStream::new();
 
         while is_running_input.load(Ordering::SeqCst) {
-            match event::poll(std::time::Duration::from_millis(200)) {
-                Ok(true) => match event::read() {
-                    Ok(raw_event) => {
-                        if tx_input.blocking_send(PinchEvent::Input(raw_event)).is_err() {
+            tokio::select! {
+                _ = tick_interval.tick() => {
+                    if tx_input.send(PinchEvent::SupervisorTick).await.is_err() {
+                        break;
+                    }
+                }
+                Some(event_result) = event_stream.next() => {
+                    match event_result {
+                        Ok(raw_event) => {
+                            if tx_input.send(PinchEvent::Input(raw_event)).await.is_err() {
+                                break;
+                            }
+                        }
+                        Err(e) => {
+                            let _ = tx_input.send(PinchEvent::Error(format!("Terminal input error: {}", e))).await;
                             break;
                         }
                     }
-                    Err(e) => {
-                        let _ = tx_input.blocking_send(PinchEvent::Error(format!("Read fail: {}", e)));
-                        break;
-                    }
-                },
-                Ok(false) => {}
-                Err(e) => {
-                    let _ = tx_input.blocking_send(PinchEvent::Error(format!("Poll fail: {}", e)));
+                }
+                else => {
                     break;
                 }
-            }
-            if last_tick.elapsed() >= std::time::Duration::from_millis(500) {
-                if tx_input.blocking_send(PinchEvent::SupervisorTick).is_err() {
-                    break;
-                }
-                last_tick = std::time::Instant::now();
             }
         }
     });
-
     let mut app = App::new(config, tx_ui, tx_logs);
     let run_result = app.run(&mut terminal, rx_ui, rx_logs).await;
 
@@ -110,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     restore_terminal();
 
     let _ = watcher_handle.await;
-    let _ = input_handle.join();
+    let _ = input_handle.await;
 
     if let Err(err) = run_result {
         eprintln!("\n[Pinch Fatal Error]: {}", err);
