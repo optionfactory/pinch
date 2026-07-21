@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file = File::open(&config_path).unwrap_or_else(|_| panic!("Failed to open configuration: {}", config_path));
     let reader = BufReader::new(file);
     let raw_config: config::RawPinchConfig = serde_yaml::from_reader(reader).expect("Failed to parse YAML config");
-    let config = raw_config.prepare();
+    let config = raw_config.prepare()?;
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();

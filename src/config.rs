@@ -90,11 +90,11 @@ pub struct ProcessConfig {
     pub auto_restart: bool,
     pub grace_period: u64,
 }
+// In src/config.rs
 
 impl RawPinchConfig {
-    pub fn prepare(self) -> PinchConfig {
+    pub fn prepare(self) -> Result<PinchConfig, String> {
         let mut context_vars = builtin_vars();
-
         if let Some(user_vars) = self.vars {
             context_vars.extend(user_vars);
         }
@@ -109,12 +109,12 @@ impl RawPinchConfig {
         let global_logs_max_size = self.logs_max_size;
         let layout = self.layout.unwrap_or_default();
 
-        let prepared_processes = self
+        // Collect into a Result to gracefully catch any parsing or docker configuration errors
+        let prepared_processes: Result<Vec<ProcessConfig>, String> = self
             .processes
             .into_iter()
             .map(|raw| {
                 let final_cwd = raw.cwd.map(|c| PathBuf::from(apply_vars(&c, &context_vars, false)));
-
                 let mut watch_paths = Vec::new();
                 if let Some(watches) = raw.watch {
                     for w in watches {
@@ -128,19 +128,18 @@ impl RawPinchConfig {
                             .docker_network
                             .clone()
                             .or_else(|| global_docker_network.clone())
-                            .unwrap_or_else(|| {
-                                panic!(
+                            .ok_or_else(|| {
+                                format!(
                                     "Process '{}' has a docker_ip, but no docker_network was found locally or globally!",
                                     raw.title
                                 )
-                            });
+                            })?;
                         Some(DockerConfig { network, ip })
                     }
                     None => None,
                 };
 
                 let use_shell = raw.shell.or(global_shell).unwrap_or(false);
-
                 let expanded_cmd = apply_vars(raw.cmd.trim(), &context_vars, true);
 
                 let final_cmd = if let Some(docker) = &resolved_docker {
@@ -150,8 +149,8 @@ impl RawPinchConfig {
                         .chars()
                         .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
                         .collect();
-                    let container_name = format!("pinch-ns-{}", sanitized_title.to_lowercase());
 
+                    let container_name = format!("pinch-ns-{}", sanitized_title.to_lowercase());
                     let mut cmd_vec = vec![
                         "docker-intrude".to_string(),
                         "--name".to_string(),
@@ -168,20 +167,21 @@ impl RawPinchConfig {
                         cmd_vec.push("-c".to_string());
                         cmd_vec.push(expanded_cmd);
                     } else {
-                        let tokens = shlex::split(&expanded_cmd).unwrap_or_else(|| panic!("Failed to parse command: {}", expanded_cmd));
+                        let tokens = shlex::split(&expanded_cmd)
+                            .ok_or_else(|| format!("Failed to parse command: {}", expanded_cmd))?;
                         cmd_vec.extend(tokens);
                     }
-
                     cmd_vec
                 } else if use_shell {
                     vec!["bash".to_string(), "-c".to_string(), expanded_cmd]
                 } else {
-                    shlex::split(&expanded_cmd).unwrap_or_else(|| panic!("Failed to parse command: {}", expanded_cmd))
+                    shlex::split(&expanded_cmd)
+                        .ok_or_else(|| format!("Failed to parse command: {}", expanded_cmd))?
                 };
 
                 let watch_settle_time_ms = raw.watch_settle_time_ms.or(global_watch_settle).unwrap_or(800);
 
-                ProcessConfig {
+                Ok(ProcessConfig {
                     title: raw.title,
                     cmd: final_cmd,
                     cwd: final_cwd,
@@ -191,16 +191,16 @@ impl RawPinchConfig {
                     auto_start: raw.auto_start.or(global_auto_start).unwrap_or(true),
                     auto_restart: raw.auto_restart.or(global_auto_restart).unwrap_or(true),
                     grace_period: raw.grace_period.or(global_grace_period).unwrap_or(3000),
-                }
+                })
             })
             .collect();
 
-        PinchConfig {
+        Ok(PinchConfig {
             title,
-            processes: prepared_processes,
+            processes: prepared_processes?,
             logs_max_size: global_logs_max_size,
             layout,
-        }
+        })
     }
 }
 
