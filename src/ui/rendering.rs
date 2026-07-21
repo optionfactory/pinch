@@ -9,6 +9,32 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui_term::widget::PseudoTerminal;
 
+const COLOR_BORDER_ACTIVE: Color = Color::Rgb(122, 162, 247); // Electric Blue
+const COLOR_BORDER_INACTIVE: Color = Color::Rgb(86, 95, 137); // Dim Gray
+
+const COLOR_HEADER_BG: Color = Color::Rgb(45, 63, 118); // Deep Navy
+const COLOR_FOOTER_BG: Color = Color::Rgb(30, 32, 48); // Deep Slate
+const COLOR_MUTED_TEXT: Color = Color::Rgb(169, 177, 214); // Soft Blue-Gray
+
+const COLOR_PANE_TITLE: Color = Color::Rgb(137, 220, 255); // Azure/Cyan tint
+const COLOR_PANE_ACCENT: Color = Color::Rgb(187, 154, 247); // Neon Purple (Used for zoom/scroll status)
+
+const COLOR_RUNNING: Color = Color::Rgb(158, 206, 106); // Bright Green
+const COLOR_STOPPED: Color = Color::Rgb(247, 118, 142); // Vibrant Pink/Red
+const COLOR_RESTARTING: Color = Color::Rgb(255, 158, 100); // Neon Orange
+const COLOR_PENDING: Color = Color::Rgb(125, 207, 255); // Bright Cyan
+
+const COLOR_LOG_PREFIX_PINK: Color = Color::Rgb(255, 150, 236); // Hot Pink
+
+const LOG_COLORS: [Color; 6] = [
+    COLOR_PENDING,
+    COLOR_RUNNING,
+    COLOR_RESTARTING,
+    COLOR_PANE_ACCENT,
+    COLOR_LOG_PREFIX_PINK,
+    COLOR_BORDER_ACTIVE,
+];
+
 fn draw_combined_logs(state: &AppState, frame: &mut Frame, area: Rect) {
     let inner_height = area.height.saturating_sub(2) as usize;
     let total_logs = state.combined_logs.len();
@@ -21,14 +47,6 @@ fn draw_combined_logs(state: &AppState, frame: &mut Frame, area: Rect) {
         .max()
         .unwrap_or(0);
 
-    let colors = [
-        Color::Cyan,
-        Color::Green,
-        Color::Yellow,
-        Color::Magenta,
-        Color::LightBlue,
-        Color::LightRed,
-    ];
     let mut list_items = vec![];
 
     for (id, text_line) in state
@@ -43,7 +61,7 @@ fn draw_combined_logs(state: &AppState, frame: &mut Frame, area: Rect) {
             .find(|p| p.id == *id)
             .map(|p| p.config.title.as_str())
             .unwrap_or("?");
-        let tag_color = colors[id % colors.len()];
+        let tag_color = LOG_COLORS[id % LOG_COLORS.len()];
 
         let mut spans = Vec::with_capacity(text_line.spans.len() + 1);
 
@@ -72,7 +90,7 @@ fn draw_combined_logs(state: &AppState, frame: &mut Frame, area: Rect) {
     let block = Block::default()
         .title(title)
         .borders(Borders::ALL)
-        .border_style(Style::default().fg(Color::Blue));
+        .border_style(Style::default().fg(COLOR_BORDER_ACTIVE));
     let paragraph = Paragraph::new(list_items).block(block).wrap(Wrap { trim: false });
     frame.render_widget(paragraph, area);
 }
@@ -86,33 +104,33 @@ fn draw_process_pane(state: &AppState, frame: &mut Frame, area: Rect, pane_id: u
 
     let is_zoomed = state.zoomed_pane == Some(pane.id);
     let border_color = if pane_idx == state.focused_pane {
-        Color::Blue
+        COLOR_BORDER_ACTIVE
     } else {
-        Color::DarkGray
+        COLOR_BORDER_INACTIVE
     };
 
     let (status, status_color) = match pane.state {
-        ProcessState::Running => ("RUNNING", Color::LightGreen),
-        ProcessState::Stopped => ("STOPPED", Color::LightRed),
-        ProcessState::ManuallyStopped => ("MANUAL STOP", Color::DarkGray),
-        ProcessState::Restarting => ("RESTARTING", Color::LightYellow),
-        ProcessState::PendingAutoRestart => ("PENDING", Color::LightCyan),
+        ProcessState::Running => ("RUNNING", COLOR_RUNNING),
+        ProcessState::Stopped => ("STOPPED", COLOR_STOPPED),
+        ProcessState::ManuallyStopped => ("MANUAL STOP", COLOR_MUTED_TEXT),
+        ProcessState::Restarting => ("RESTARTING", COLOR_RESTARTING),
+        ProcessState::PendingAutoRestart => ("PENDING", COLOR_PENDING),
     };
 
     let (btn_toggle_str, btn_toggle_color) = if pane.state == ProcessState::Running {
-        (" [■]", Color::Red)
+        (" [■]", COLOR_STOPPED)
     } else {
-        (" [▶]", Color::Green)
+        (" [▶]", COLOR_RUNNING)
     };
 
     let mut title_spans = vec![
         Span::styled(btn_toggle_str, Style::default().fg(btn_toggle_color)),
-        Span::styled(" [↺]", Style::default().fg(Color::Yellow)),
-        Span::styled(" [↩]", Style::default().fg(Color::Cyan)),
-        Span::styled(" [⤢]", Style::default().fg(Color::LightMagenta)),
-        Span::raw(" ["),
-        Span::styled(status, Style::default().fg(status_color)),
-        Span::raw("]"),
+        Span::styled(" [↺]", Style::default().fg(COLOR_RESTARTING)),
+        Span::styled(" [↩]", Style::default().fg(COLOR_PENDING)),
+        Span::styled(" [⤢]", Style::default().fg(COLOR_PANE_ACCENT)),
+        Span::styled(" [", Style::default().fg(COLOR_BORDER_INACTIVE)),
+        Span::styled(status, Style::default().fg(status_color).add_modifier(Modifier::BOLD)),
+        Span::styled("]", Style::default().fg(COLOR_BORDER_INACTIVE)),
     ];
 
     if pane.config.mode == PaneMode::Log {
@@ -130,10 +148,10 @@ fn draw_process_pane(state: &AppState, frame: &mut Frame, area: Rect, pane_id: u
             "".to_string()
         };
 
-        title_spans.push(Span::styled(scroll_status, Style::default().fg(Color::Magenta)));
+        title_spans.push(Span::styled(scroll_status, Style::default().fg(COLOR_PANE_ACCENT)));
         title_spans.push(Span::styled(
             format!("{}{}", wrap_status, h_scroll_status),
-            Style::default().fg(Color::Magenta),
+            Style::default().fg(COLOR_PANE_ACCENT),
         ));
     } else {
         let tui_status = if pane.tui_focused {
@@ -143,9 +161,9 @@ fn draw_process_pane(state: &AppState, frame: &mut Frame, area: Rect, pane_id: u
         };
 
         let tui_color = if pane.tui_focused {
-            Color::LightCyan
+            COLOR_PENDING
         } else {
-            Color::DarkGray
+            COLOR_MUTED_TEXT
         };
 
         title_spans.push(Span::styled(
@@ -154,7 +172,10 @@ fn draw_process_pane(state: &AppState, frame: &mut Frame, area: Rect, pane_id: u
         ));
     }
 
-    title_spans.push(Span::raw(format!(" {}", pane.config.title)));
+    title_spans.push(Span::styled(
+        format!(" {}", pane.config.title),
+        Style::default().fg(COLOR_PANE_TITLE).add_modifier(Modifier::BOLD)
+    ));
     let title_line = Line::from(title_spans);
 
     let active_borders = if is_zoomed {
@@ -214,7 +235,7 @@ fn draw_process_grid(state: &AppState, frame: &mut Frame, _grid_area: Rect) {
 fn draw_header(state: &AppState, frame: &mut Frame, area: Rect) {
     let header_text = Paragraph::new(format!(" {} ", state.title)).style(
         Style::default()
-            .bg(Color::Blue)
+            .bg(COLOR_HEADER_BG)
             .fg(Color::White)
             .add_modifier(Modifier::BOLD),
     );
@@ -228,7 +249,11 @@ fn draw_footer(state: &AppState, frame: &mut Frame, area: Rect) {
         " [s] Start/Stop | [r] Restart | [^L] Clear | [w] Wrap | [z] Zoom | [^A] All Logs | [^Q] Quit "
     };
 
-    let help_text = Paragraph::new(help_str).style(Style::default().bg(Color::DarkGray).fg(Color::White));
+    let help_text = Paragraph::new(help_str).style(
+        Style::default()
+            .bg(COLOR_FOOTER_BG)
+            .fg(COLOR_MUTED_TEXT)
+    );
     frame.render_widget(help_text, area);
 }
 
