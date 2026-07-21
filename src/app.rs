@@ -201,7 +201,6 @@ impl App {
                     pane.parser.process(&bytes);
                 }
             }
-            PinchEvent::ProcessExit(id, success) => self.handle_process_exit(id, success),
             PinchEvent::SupervisorTick => {
                 let mut exited_ids = vec![];
                 for pane in &mut self.state.panes {

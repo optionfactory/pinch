@@ -60,7 +60,6 @@ pub fn spawn_process(
             PaneMode::Log => handle_log_mode(master_reader, pane_id, tx_logs),
             PaneMode::Tui => handle_tui_mode(master_reader, pane_id, tx_logs),
         }
-        let _ = tx_ui.blocking_send(PinchEvent::ProcessExit(pane_id, false));
     });
 
     Ok(PtyProcess {

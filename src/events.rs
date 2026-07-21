@@ -5,7 +5,6 @@ pub enum PinchEvent {
     Input(Event),
     LogLine(usize, String),
     TerminalBytes(usize, Vec<u8>),
-    ProcessExit(usize, bool),
     RestartProcess(usize, bool),
     FileChanged(usize),
     SupervisorTick,
