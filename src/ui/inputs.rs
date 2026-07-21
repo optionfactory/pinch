@@ -199,9 +199,11 @@ pub fn handle_mouse(state: &mut AppState, mouse_event: MouseEvent) -> AppAction 
     if let Some(geo) = clicked_geo {
         match geo.target {
             crate::ui::layouts::PaneTarget::Process(proc_id) => {
-                let pane_idx = state.panes.iter().position(|p| p.id == proc_id).unwrap();
-                state.focused_pane = pane_idx;
+                let Some(pane_idx) = state.panes.iter().position(|p| p.id == proc_id) else {
+                    return AppAction::None;
+                };
 
+                state.focused_pane = pane_idx;
                 let inner_height = geo.area.height.saturating_sub(2) as usize;
                 let pane = &mut state.panes[pane_idx];
 

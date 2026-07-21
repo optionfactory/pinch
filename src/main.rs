@@ -43,10 +43,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }));
 
     let config_path = cli::parse_args();
-    let file = File::open(&config_path).map_err(|e| format!("Failed to open configuration '{}': {}", config_path, e))?;
+    let file =
+        File::open(&config_path).map_err(|e| format!("Failed to open configuration '{}': {}", config_path, e))?;
     let reader = BufReader::new(file);
-    let raw_config: config::RawPinchConfig = serde_yaml::from_reader(reader)
-        .map_err(|e| format!("Failed to parse YAML config: {}", e))?;
+    let raw_config: config::RawPinchConfig =
+        serde_yaml::from_reader(reader).map_err(|e| format!("Failed to parse YAML config: {}", e))?;
     let config = raw_config.prepare()?;
 
     enable_raw_mode()?;
@@ -60,14 +61,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let is_running = Arc::new(AtomicBool::new(true));
 
     let tx_signal = tx_ui.clone();
-    tokio::spawn(async move{
+    tokio::spawn(async move {
         use tokio::signal::unix::{SignalKind, signal};
-        let mut sigterm = signal(SignalKind::terminate()).unwrap();
+        let mut sigterm = match signal(SignalKind::terminate()) {
+            Ok(s) => s,
+            Err(e) => {
+                let _ = tx_signal
+                    .send(PinchEvent::Error(format!("Failed to bind to SIGTERM: {}", e)))
+                    .await;
+                return;
+            }
+        };
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {}
             _ = sigterm.recv() => {}
         }
-
         let _ = tx_signal
             .send(PinchEvent::Error("Interrupted by OS signal".to_string()))
             .await;
