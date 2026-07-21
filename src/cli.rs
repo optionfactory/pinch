@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::Write;
 
+pub const DEFAULT_CONFIG_FILE: &str = "pinch.yaml";
+
 pub fn parse_args() -> String {
     let args: Vec<String> = std::env::args().collect();
 
@@ -24,7 +26,7 @@ pub fn parse_args() -> String {
 
     if args.iter().any(|arg| arg == "--init") {
         let default_yaml = include_str!("default_config.yaml");
-        let path = "pinch.yaml";
+        let path = DEFAULT_CONFIG_FILE;
 
         if std::path::Path::new(path).exists() {
             eprintln!("Error: '{}' already exists. We don't want to overwrite it!", path);
@@ -41,6 +43,6 @@ pub fn parse_args() -> String {
     if args.len() > 1 {
         args[1].clone()
     } else {
-        "pinch.yaml".to_string()
+        DEFAULT_CONFIG_FILE.to_string()
     }
 }
