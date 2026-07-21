@@ -26,7 +26,7 @@ impl App {
 
         for pane in panes.iter_mut() {
             if pane.config.auto_start {
-                match spawn_process(pane.id, &pane.config, ui_tx.clone(), logs_tx.clone()) {
+                match spawn_process(pane.id, &pane.config, logs_tx.clone()) {
                     Ok(PtyProcess { child, writer, master }) => {
                         pane.state = ProcessState::Running;
                         pane.child_process = Some(child);
@@ -255,7 +255,7 @@ impl App {
                     pane.view_top_index = None;
                 }
 
-                match spawn_process(id, &pane.config, self.ui_tx.clone(), self.logs_tx.clone()) {
+                match spawn_process(id, &pane.config, self.logs_tx.clone()) {
                     Ok(PtyProcess { child, writer, master }) => {
                         pane.state = ProcessState::Running;
                         pane.child_process = Some(child);

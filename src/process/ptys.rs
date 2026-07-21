@@ -13,7 +13,6 @@ pub struct PtyProcess {
 pub fn spawn_process(
     pane_id: usize,
     cfg: &ProcessConfig,
-    tx_ui: mpsc::Sender<PinchEvent>,
     tx_logs: mpsc::Sender<PinchEvent>,
 ) -> Result<PtyProcess, String> {
     let pty_system = NativePtySystem::default();
