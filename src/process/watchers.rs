@@ -12,13 +12,13 @@ pub fn start_watcher(
     tx_watcher: mpsc::Sender<PinchEvent>,
     is_running: Arc<AtomicBool>,
 ) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error>> {
-    let (watch_tx, mut watch_rx) = tokio::sync::mpsc::unbounded_channel();
+    let (watch_tx, mut watch_rx) = tokio::sync::mpsc::channel(1024);
 
     let mut watcher = RecommendedWatcher::new(
         move |res: notify::Result<notify::Event>| {
             if let Ok(event) = res {
                 if event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove() {
-                    let _ = watch_tx.send(event);
+                    let _ = watch_tx.try_send(event);
                 }
             }
         },
