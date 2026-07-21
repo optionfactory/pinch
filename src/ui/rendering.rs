@@ -45,7 +45,7 @@ fn draw_combined_logs(state: &AppState, frame: &mut Frame, area: Rect) {
             .unwrap_or("?");
         let tag_color = colors[id % colors.len()];
 
-        let mut text_line = text_line.clone();
+        let mut spans = Vec::with_capacity(text_line.spans.len() + 1);
 
         if state.show_combined_prefixes {
             let padded_name = format!("{:>width$}", name, width = max_name_len);
@@ -53,9 +53,14 @@ fn draw_combined_logs(state: &AppState, frame: &mut Frame, area: Rect) {
                 format!("[{}] ", padded_name),
                 Style::default().fg(tag_color).add_modifier(Modifier::BOLD),
             );
-            text_line.spans.insert(0, prefix_span);
+            spans.push(prefix_span);
         }
-        list_items.push(text_line);
+
+        spans.extend(text_line.spans.iter().map(|s| {
+            Span::styled(s.content.as_ref(), s.style)
+        }));
+
+        list_items.push(Line::from(spans));
     }
 
     let title = if view.is_scrolled {
@@ -166,12 +171,17 @@ fn draw_process_pane(state: &AppState, frame: &mut Frame, area: Rect, pane_id: u
         PaneMode::Log => {
             let total_logs = pane.logs.len();
             let view = Viewport::visible_range(total_logs, inner_height, pane.view_top_index);
-            let log_slice: Vec<Line<'static>> = pane
+            let log_slice: Vec<Line> = pane
                 .logs
                 .iter()
                 .skip(view.start)
                 .take(view.end.saturating_sub(view.start))
-                .cloned()
+                .map(|line| {
+                    let borrowed_spans: Vec<Span> = line.spans.iter().map(|s| {
+                        Span::styled(s.content.as_ref(), s.style)
+                    }).collect();
+                    Line::from(borrowed_spans)
+                })
                 .collect();
 
             let mut paragraph = Paragraph::new(log_slice).block(block);
