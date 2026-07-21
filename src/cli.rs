@@ -33,10 +33,20 @@ pub fn parse_args() -> String {
             std::process::exit(1);
         }
 
-        let mut file = File::create(path).expect("Failed to create default config file");
-        file.write_all(default_yaml.as_bytes()).expect("Failed to write config");
+        let mut file = match File::create(path) {
+            Ok(f) => f,
+            Err(e) => {
+                eprintln!("Error: Failed to create default config file '{}': {}", path, e);
+                std::process::exit(1);
+            }
+        };
 
-        println!("Successfully generated '{}'. You're ready to go!", path);
+        if let Err(e) = file.write_all(default_yaml.as_bytes()) {
+            eprintln!("Error: Failed to write to config file '{}': {}", path, e);
+            std::process::exit(1);
+        }
+
+        println!("Successfully generated '{}'.", path);
         std::process::exit(0);
     }
 

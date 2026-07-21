@@ -24,7 +24,7 @@ pub fn spawn_process(
             pixel_width: 0,
             pixel_height: 0,
         })
-        .expect("Failed to open PTY");
+        .map_err(|e| format!("Failed to open PTY: {}", e))?;
 
     let tokens = &cfg.cmd;
     if tokens.is_empty() {
@@ -48,8 +48,10 @@ pub fn spawn_process(
     };
     drop(pair.slave);
 
-    let master_reader = pair.master.try_clone_reader().expect("Failed to clone PTY reader");
-    let master_writer = pair.master.take_writer().expect("Failed to take PTY writer");
+    let master_reader = pair.master.try_clone_reader()
+        .map_err(|e| format!("Failed to clone PTY reader: {}", e))?;
+    let master_writer = pair.master.take_writer()
+        .map_err(|e| format!("Failed to clone PTY writer: {}", e))?;
 
     let mode = cfg.mode;
 
