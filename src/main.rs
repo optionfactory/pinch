@@ -42,23 +42,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         original_hook(panic_info);
     }));
 
-    tokio::spawn(async {
-        use tokio::signal::unix::{SignalKind, signal};
-        let mut sigterm = signal(SignalKind::terminate()).unwrap();
-        tokio::select! {
-            _ = tokio::signal::ctrl_c() => {}
-            _ = sigterm.recv() => {}
-        }
-
-        restore_terminal();
-        eprintln!("\n[Pinch] Interrupted by signal. Restored terminal environment cleanly.");
-        std::process::exit(130);
-    });
-
     let config_path = cli::parse_args();
-    let file = File::open(&config_path).unwrap_or_else(|_| panic!("Failed to open configuration: {}", config_path));
+    let file = File::open(&config_path).map_err(|e| format!("Failed to open configuration '{}': {}", config_path, e))?;
     let reader = BufReader::new(file);
-    let raw_config: config::RawPinchConfig = serde_yaml::from_reader(reader).expect("Failed to parse YAML config");
+    let raw_config: config::RawPinchConfig = serde_yaml::from_reader(reader)
+        .map_err(|e| format!("Failed to parse YAML config: {}", e))?;
     let config = raw_config.prepare()?;
 
     enable_raw_mode()?;
@@ -70,6 +58,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (tx_ui, rx_ui) = mpsc::channel::<PinchEvent>(100);
     let (tx_logs, rx_logs) = mpsc::channel::<PinchEvent>(10_000);
     let is_running = Arc::new(AtomicBool::new(true));
+
+    let tx_signal = tx_ui.clone();
+    tokio::spawn(async move{
+        use tokio::signal::unix::{SignalKind, signal};
+        let mut sigterm = signal(SignalKind::terminate()).unwrap();
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {}
+            _ = sigterm.recv() => {}
+        }
+
+        let _ = tx_signal
+            .send(PinchEvent::Error("Interrupted by OS signal".to_string()))
+            .await;
+    });
 
     let watcher_handle = process::watchers::start_watcher(&config, tx_ui.clone(), Arc::clone(&is_running))?;
 
