@@ -297,8 +297,17 @@ impl App {
         if let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) {
             if pane.state == ProcessState::Running {
                 pane.state = ProcessState::Restarting;
-                pane.terminate();
+                
+                let terminate_handle = pane.terminate();
                 pane.add_system_log("RESTARTING", ratatui::style::Color::Yellow);
+
+                let tx_clone = self.ui_tx.clone();
+                tokio::spawn(async move {
+                    if let Some(handle) = terminate_handle {
+                        let _ = handle.await;
+                    }
+                    let _ = tx_clone.send(PinchEvent::RestartProcess(id, false)).await;
+                });
             } else {
                 self.start_process(id, false);
             }

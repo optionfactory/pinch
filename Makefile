@@ -12,7 +12,7 @@ run:
 	cargo run
 
 install:
-	cp target/x86_64-unknown-linux-musl/release/pinch /usr/local/bin/pinch
+	sudo cp target/x86_64-unknown-linux-musl/release/pinch /usr/local/bin/pinch
 
 publish-github: build-release
 	$(eval version=$(shell cargo metadata --format-version=1 --no-deps | jq -r '.packages[0].version'))
