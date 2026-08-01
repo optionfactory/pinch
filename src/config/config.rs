@@ -203,11 +203,7 @@ impl PinchManifest {
         Ok(())
     }
 
-pub fn list_images(
-        &self,
-        cli_vars: &HashMap<String, String>,
-        format: Option<OutputFormat>,
-    ) -> Result<(), String> {
+    pub fn list_images(&self, cli_vars: &HashMap<String, String>, format: Option<OutputFormat>) -> Result<(), String> {
         let context_vars = self.resolve_vars(cli_vars);
         let mut images = BTreeSet::new();
 
@@ -239,7 +235,7 @@ pub fn list_images(
             }
         }
         Ok(())
-    }    
+    }
 
     pub fn prepare(&self, cli_vars: HashMap<String, String>, background: bool) -> Result<PinchConfig, String> {
         let context_vars = self.resolve_vars(&cli_vars);

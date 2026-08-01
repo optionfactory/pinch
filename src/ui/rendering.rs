@@ -1,6 +1,6 @@
 use crate::config::PaneMode;
-use crate::dashboard::DashboardState;
 use crate::process::panes::{LogMode, ProcessState};
+use crate::supervisor::DashboardState;
 use crate::ui::layouts::Viewport;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};

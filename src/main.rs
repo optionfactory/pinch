@@ -1,7 +1,5 @@
 mod cli;
 mod config;
-mod dashboard;
-mod events;
 mod process;
 mod runners;
 mod supervisor;
@@ -14,7 +12,6 @@ use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture};
 use crossterm::execute;
 use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
-use events::SupervisorEvent;
 use futures::StreamExt;
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::fs::File;
@@ -24,6 +21,7 @@ use std::panic;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use supervisor::Supervisor;
+use supervisor::SupervisorEvent;
 use tokio::sync::mpsc;
 use tokio::time::{Duration, interval};
 
@@ -159,7 +157,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 raw_config.list_images(&parsed.vars, format)?;
                 return Ok(());
             }
-        },        
+        },
         cli::CliAction::Tui => {
             let config = raw_config.prepare(parsed.vars.clone(), false)?;
             raw_config.create_networks(&parsed.vars, None)?;

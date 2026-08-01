@@ -1,4 +1,4 @@
-use crate::events::SupervisorEvent;
+use crate::supervisor::SupervisorEvent;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;

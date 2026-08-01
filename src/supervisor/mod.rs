@@ -1,6 +1,7 @@
+pub mod dashboard;
+pub use dashboard::DashboardState;
+
 use crate::config::PinchConfig;
-use crate::dashboard::DashboardState;
-use crate::events::SupervisorEvent;
 use crate::process::panes::{ProcessPane, ProcessState};
 use crate::process::ptys::{PtyHandle, spawn_process};
 use crate::ui::inputs::{UserAction, handle_key, handle_mouse};
@@ -8,6 +9,17 @@ use crossterm::event::Event;
 use std::collections::VecDeque;
 use std::time::Duration;
 use tokio::sync::mpsc;
+
+#[derive(Debug)]
+pub enum SupervisorEvent {
+    Input(Event),
+    LogLine(usize, String),
+    TerminalBytes(usize, Vec<u8>),
+    RestartProcess(usize, bool),
+    FileChanged(usize),
+    SupervisorTick,
+    Error(String),
+}
 
 pub struct Supervisor {
     pub state: DashboardState,

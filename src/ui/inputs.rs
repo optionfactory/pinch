@@ -1,6 +1,6 @@
 use crate::config::PaneMode;
-use crate::dashboard::DashboardState;
 use crate::process::panes::{LogMode, ProcessState};
+use crate::supervisor::DashboardState;
 use crate::ui::layouts::RectHitTest;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 

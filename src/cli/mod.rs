@@ -54,7 +54,7 @@ pub enum Commands {
     Image {
         #[command(subcommand)]
         command: ImageSubcommand,
-    },    
+    },
     #[command(about = "Manage configuration files")]
     Config {
         #[command(subcommand)]
@@ -120,12 +120,7 @@ pub enum NetSubcommand {
 pub enum ImageSubcommand {
     #[command(about = "List all unique Docker images used by processes in the configuration")]
     Ls {
-        #[arg(
-            short = 'f',
-            long = "format",
-            help = "Output format (defaults to 'raw')",
-            value_enum
-        )]
+        #[arg(short = 'f', long = "format", help = "Output format (defaults to 'raw')", value_enum)]
         format: Option<OutputFormat>,
     },
 }
@@ -258,7 +253,7 @@ pub fn parse_args() -> ParsedCli {
                 ImageSubcommand::Ls { format } => ImageCommand::Ls { format },
             };
             CliAction::Image(cmd)
-        }        
+        }
         Some(Commands::Config { command }) => {
             let cmd = match command {
                 ConfigSubcommand::Init => ConfigCommand::Init,

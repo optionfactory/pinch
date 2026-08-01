@@ -1,5 +1,5 @@
 use crate::config::{PaneMode, ProcessConfig};
-use crate::events::SupervisorEvent;
+use crate::supervisor::SupervisorEvent;
 use portable_pty::{Child, NativePtySystem, PtySize, PtySystem};
 use std::io::Read;
 use tokio::sync::mpsc;
