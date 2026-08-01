@@ -2,59 +2,6 @@ use crate::config::{LayoutBlock, LayoutEdge};
 use crate::process::panes::ProcessPane;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 
-pub trait RectHitTest {
-    fn hit(&self, x: u16, y: u16) -> bool;
-}
-
-impl RectHitTest for Rect {
-    fn hit(&self, x: u16, y: u16) -> bool {
-        x >= self.x && x < self.x + self.width && y >= self.y && y < self.y + self.height
-    }
-}
-
-pub struct Viewport {
-    pub start: usize,
-    pub end: usize,
-    pub is_scrolled: bool,
-}
-
-impl Viewport {
-    pub fn visible_range(total_items: usize, available_height: usize, top_index: Option<usize>) -> Self {
-        match top_index {
-            None => {
-                let start = total_items.saturating_sub(available_height);
-                Self {
-                    start,
-                    end: total_items,
-                    is_scrolled: false,
-                }
-            }
-            Some(top_idx) => {
-                let clamped_top = top_idx.min(total_items.saturating_sub(available_height));
-                let end = (clamped_top + available_height).min(total_items);
-                Self {
-                    start: clamped_top,
-                    end,
-                    is_scrolled: true,
-                }
-            }
-        }
-    }
-}
-
-fn safe_rect(x: u16, y: u16, width: u16, pane_area: Rect) -> Rect {
-    let max_x = pane_area.x + pane_area.width;
-    let fits = x < max_x;
-    let w = if fits { width.min(max_x.saturating_sub(x)) } else { 0 };
-    let h = if fits { 1 } else { 0 };
-    Rect {
-        x,
-        y,
-        width: w,
-        height: h,
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PaneTarget {
     Process(usize),
@@ -268,4 +215,17 @@ pub fn compute_pane_geometries(
     }
 
     geometries
+}
+
+fn safe_rect(x: u16, y: u16, width: u16, pane_area: Rect) -> Rect {
+    let max_x = pane_area.x + pane_area.width;
+    let fits = x < max_x;
+    let w = if fits { width.min(max_x.saturating_sub(x)) } else { 0 };
+    let h = if fits { 1 } else { 0 };
+    Rect {
+        x,
+        y,
+        width: w,
+        height: h,
+    }
 }

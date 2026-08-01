@@ -1,7 +1,6 @@
 use crate::config::PaneMode;
 use crate::process::panes::{LogMode, ProcessState};
-use crate::supervisor::DashboardState;
-use crate::ui::layouts::Viewport;
+use crate::ui::DashboardState;
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
@@ -9,21 +8,47 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use tui_term::widget::PseudoTerminal;
 
+pub struct Viewport {
+    pub start: usize,
+    pub end: usize,
+    pub is_scrolled: bool,
+}
+
+impl Viewport {
+    pub fn visible_range(total_items: usize, available_height: usize, top_index: Option<usize>) -> Self {
+        match top_index {
+            None => {
+                let start = total_items.saturating_sub(available_height);
+                Self {
+                    start,
+                    end: total_items,
+                    is_scrolled: false,
+                }
+            }
+            Some(top_idx) => {
+                let clamped_top = top_idx.min(total_items.saturating_sub(available_height));
+                let end = (clamped_top + available_height).min(total_items);
+                Self {
+                    start: clamped_top,
+                    end,
+                    is_scrolled: true,
+                }
+            }
+        }
+    }
+}
+
 const COLOR_BORDER_ACTIVE: Color = Color::Rgb(122, 162, 247); // Electric Blue
 const COLOR_BORDER_INACTIVE: Color = Color::Rgb(86, 95, 137); // Dim Gray
-
 const COLOR_HEADER_BG: Color = Color::Rgb(45, 63, 118); // Deep Navy
 const COLOR_FOOTER_BG: Color = Color::Rgb(30, 32, 48); // Deep Slate
 const COLOR_MUTED_TEXT: Color = Color::Rgb(169, 177, 214); // Soft Blue-Gray
-
 const COLOR_PANE_TITLE: Color = Color::Rgb(137, 220, 255); // Azure/Cyan tint
 const COLOR_PANE_ACCENT: Color = Color::Rgb(187, 154, 247); // Neon Purple (Used for zoom/scroll status)
-
 const COLOR_RUNNING: Color = Color::Rgb(158, 206, 106); // Bright Green
 const COLOR_STOPPED: Color = Color::Rgb(247, 118, 142); // Vibrant Pink/Red
 const COLOR_RESTARTING: Color = Color::Rgb(255, 158, 100); // Neon Orange
 const COLOR_PENDING: Color = Color::Rgb(125, 207, 255); // Bright Cyan
-
 const COLOR_LOG_PREFIX_PINK: Color = Color::Rgb(255, 150, 236); // Hot Pink
 
 const LOG_COLORS: [Color; 6] = [

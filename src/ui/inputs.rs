@@ -1,8 +1,8 @@
 use crate::config::PaneMode;
 use crate::process::panes::{LogMode, ProcessState};
-use crate::supervisor::DashboardState;
-use crate::ui::layouts::RectHitTest;
+use crate::ui::DashboardState;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use ratatui::layout::Rect;
 
 pub enum UserAction {
     None,
@@ -12,6 +12,16 @@ pub enum UserAction {
     ToggleZoom(usize),
     OpenLink(usize),
     NextTab,
+}
+
+pub trait RectHitTest {
+    fn hit(&self, x: u16, y: u16) -> bool;
+}
+
+impl RectHitTest for Rect {
+    fn hit(&self, x: u16, y: u16) -> bool {
+        x >= self.x && x < self.x + self.width && y >= self.y && y < self.y + self.height
+    }
 }
 
 pub fn handle_key(state: &mut DashboardState, key: KeyEvent) -> UserAction {

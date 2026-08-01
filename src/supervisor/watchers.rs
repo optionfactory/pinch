@@ -23,10 +23,8 @@ pub fn start_watcher(
         },
         Config::default(),
     )?;
-
     let mut path_to_pane: Vec<(PathBuf, usize)> = Vec::new();
     let mut pane_settle_times: HashMap<usize, Duration> = HashMap::new();
-
     for (idx, process) in config.processes.iter().enumerate() {
         pane_settle_times.insert(idx, Duration::from_millis(process.watch_settle_time_ms));
         for path in &process.watch {
@@ -38,10 +36,8 @@ pub fn start_watcher(
             }
         }
     }
-
     let handle = tokio::spawn(async move {
         let mut pending_restarts: HashMap<usize, Instant> = HashMap::new();
-
         while is_running.load(Ordering::SeqCst) {
             match tokio::time::timeout(Duration::from_millis(100), watch_rx.recv()).await {
                 Ok(Some(event)) => {
@@ -58,10 +54,8 @@ pub fn start_watcher(
                 Ok(None) => break,
                 Err(_) => {}
             }
-
             let now = Instant::now();
             let mut ready_to_restart = Vec::new();
-
             for (pane_id, last_event_time) in &pending_restarts {
                 let settle_time = pane_settle_times
                     .get(pane_id)
@@ -71,7 +65,6 @@ pub fn start_watcher(
                     ready_to_restart.push(*pane_id);
                 }
             }
-
             for pane_id in ready_to_restart {
                 pending_restarts.remove(&pane_id);
                 let _ = tx_watcher.send(SupervisorEvent::FileChanged(pane_id)).await;
@@ -79,6 +72,5 @@ pub fn start_watcher(
         }
         drop(watcher);
     });
-
     Ok(handle)
 }
