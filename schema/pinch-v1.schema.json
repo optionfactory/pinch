@@ -223,6 +223,51 @@
       },
       "additionalProperties": false
     },
+    "EnvironmentType": {
+      "description": "Supported deployment environment types.",
+      "oneOf": [
+        {
+          "description": "Local developer machines or active feature branch environments.",
+          "type": "string",
+          "const": "development"
+        },
+        {
+          "description": "Automated CI/CD integration and unit testing environments.",
+          "type": "string",
+          "const": "testing"
+        },
+        {
+          "description": "Dedicated Quality Assurance and manual regression environment.",
+          "type": "string",
+          "const": "qa"
+        },
+        {
+          "description": "Pre-production mirror environment for final acceptance testing.",
+          "type": "string",
+          "const": "staging"
+        },
+        {
+          "description": "Sales demo, customer sandbox, or PR preview environments.",
+          "type": "string",
+          "const": "demo"
+        },
+        {
+          "description": "Live customer-facing production environment.",
+          "type": "string",
+          "const": "production"
+        },
+        {
+          "description": "Disaster recovery, warm standby, or secondary failover region.",
+          "type": "string",
+          "const": "disaster-recovery"
+        },
+        {
+          "description": "Uncategorized or custom specialized environment.",
+          "type": "string",
+          "const": "other"
+        }
+      ]
+    },
     "ExposureType": {
       "description": "Network ingress reachability for the project.",
       "oneOf": [
@@ -511,6 +556,9 @@
           ],
           "additionalProperties": {
             "$ref": "#/$defs/EnvironmentConfig"
+          },
+          "propertyNames": {
+            "$ref": "#/$defs/EnvironmentType"
           }
         },
         "lifecycle": {
@@ -552,7 +600,8 @@
       },
       "additionalProperties": false,
       "required": [
-        "name"
+        "name",
+        "environments"
       ]
     },
     "ProjectType": {

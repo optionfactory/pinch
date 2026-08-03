@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
+use schemars::{json_schema, Schema, SchemaGenerator};
 
 #[doc = "Root configuration manifest for a Pinch project (`pinch.yaml`)."]
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -60,6 +61,7 @@ pub struct ProjectManifest {
     pub sensitivity: Option<Vec<Sensitivity>>,
     #[doc = "Environment-specific deployment configurations."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(schema_with = "environments_schema")]    
     pub environments: Option<BTreeMap<EnvironmentType, EnvironmentConfig>>,
 }
 
@@ -393,4 +395,15 @@ impl DockerNetworkConfig {
             Self::Detailed { args, .. } => args.as_deref(),
         }
     }
+}
+
+
+fn environments_schema(g: &mut SchemaGenerator) -> Schema {
+    let env_config_schema = g.subschema_for::<EnvironmentConfig>();
+    let env_type_schema = g.subschema_for::<EnvironmentType>();
+    json_schema!({
+        "type": ["object", "null"],
+        "propertyNames": env_type_schema,
+        "additionalProperties": env_config_schema
+    })
 }
