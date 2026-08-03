@@ -215,35 +215,61 @@ pub enum Sensitivity {
 }
 
 #[doc = "Regulatory compliance and cybersecurity resilience specifications."]
+#[doc = ""]
+#[doc = "### Framework Applicability Guide"]
+#[doc = "* **`dora`:** EU financial sector & ICT third-party providers to finance."]
+#[doc = "* **`cra`:** Software products with digital elements sold/distributed in the EU."]
+#[doc = "* **`nis2`:** Critical/important non-financial infrastructure (energy, health, SaaS, MSPs)."]
+#[doc = "* **`aiact`:** Systems integrating AI/ML models, LLMs, or automated inference."]
+#[doc = "* **`gdpr`:** Any project processing, storing, or transmitting EU/EEA personal data."]
+#[doc = "* **`ads`:** Italian Garante Privacy governance for privileged IT/database administrators."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ComplianceManifest {
     #[doc = "DORA (Digital Operational Resilience Act) criticality tag."]
+    #[doc = ""]
+    #[doc = "### Applicability Scope"]
+    #[doc = "Applies if the project operates within or provides ICT services to **EU financial institutions** (banks, insurance companies, investment firms, payment processors, or crypto-asset service providers)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "DoraCriticality")]
     pub dora: Option<DoraCriticality>,
 
     #[doc = "EU Cyber Resilience Act (CRA) product classification tier."]
+    #[doc = ""]
+    #[doc = "### Applicability Scope"]
+    #[doc = "Applies to any **software product with digital elements** distributed, commercialized, or deployed in the EU marketplace (including standalone software, firmware, and SaaS runtimes)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "CraClass")]
     pub cra: Option<CraClass>,
 
-    #[doc = "EU NIS2 Directive criticality classification (for non-financial critical infrastructure)."]
+    #[doc = "EU NIS2 Directive criticality classification."]
+    #[doc = ""]
+    #[doc = "### Applicability Scope"]
+    #[doc = "Applies if the project supports **critical or important non-financial infrastructure** across the EU (such as energy, healthcare, transport, water, digital providers, SaaS marketplaces, or managed ICT services)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Nis2Category")]
     pub nis2: Option<Nis2Category>,
 
     #[doc = "EU AI Act risk classification tier."]
+    #[doc = ""]
+    #[doc = "### Applicability Scope"]
+    #[doc = "Applies whenever the project develops, deploys, or integrates **AI/ML models, LLMs, foundation models, or automated decision-making/inference engines**."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AiActClass")]
-    pub ai_act: Option<AiActClass>,
+    pub aiact: Option<AiActClass>,
 
     #[doc = "GDPR data protection role and data residency boundaries."]
+    #[doc = ""]
+    #[doc = "### Applicability Scope"]
+    #[doc = "Applies to **any project that processes, stores, transmits, or logs personal data** (PII/SPI) belonging to individuals located in the EU/EEA."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "GdprManifest")]
     pub gdpr: Option<GdprManifest>,
 
     #[doc = "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block."]
+    #[doc = ""]
+    #[doc = "### Applicability Scope"]
+    #[doc = "Mandatory under **Italian data protection regulations (Provvedimento Garante Privacy 2008/2009)** whenever technical personnel or automated processes hold **privileged administrative access** over systems or databases containing personal data."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AdsManifest")]
     pub ads: Option<AdsManifest>,

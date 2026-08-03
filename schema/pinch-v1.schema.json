@@ -260,31 +260,31 @@
       ]
     },
     "ComplianceManifest": {
-      "description": "Regulatory compliance and cybersecurity resilience specifications.",
+      "description": "Regulatory compliance and cybersecurity resilience specifications.\n\n### Framework Applicability Guide\n* **`dora`:** EU financial sector & ICT third-party providers to finance.\n* **`cra`:** Software products with digital elements sold/distributed in the EU.\n* **`nis2`:** Critical/important non-financial infrastructure (energy, health, SaaS, MSPs).\n* **`aiact`:** Systems integrating AI/ML models, LLMs, or automated inference.\n* **`gdpr`:** Any project processing, storing, or transmitting EU/EEA personal data.\n* **`ads`:** Italian Garante Privacy governance for privileged IT/database administrators.",
       "type": "object",
       "properties": {
         "ads": {
-          "description": "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block.",
+          "description": "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block.\n\n### Applicability Scope\nMandatory under **Italian data protection regulations (Provvedimento Garante Privacy 2008/2009)** whenever technical personnel or automated processes hold **privileged administrative access** over systems or databases containing personal data.",
           "$ref": "#/$defs/AdsManifest"
         },
-        "ai_act": {
-          "description": "EU AI Act risk classification tier.",
+        "aiact": {
+          "description": "EU AI Act risk classification tier.\n\n### Applicability Scope\nApplies whenever the project develops, deploys, or integrates **AI/ML models, LLMs, foundation models, or automated decision-making/inference engines**.",
           "$ref": "#/$defs/AiActClass"
         },
         "cra": {
-          "description": "EU Cyber Resilience Act (CRA) product classification tier.",
+          "description": "EU Cyber Resilience Act (CRA) product classification tier.\n\n### Applicability Scope\nApplies to any **software product with digital elements** distributed, commercialized, or deployed in the EU marketplace (including standalone software, firmware, and SaaS runtimes).",
           "$ref": "#/$defs/CraClass"
         },
         "dora": {
-          "description": "DORA (Digital Operational Resilience Act) criticality tag.",
+          "description": "DORA (Digital Operational Resilience Act) criticality tag.\n\n### Applicability Scope\nApplies if the project operates within or provides ICT services to **EU financial institutions** (banks, insurance companies, investment firms, payment processors, or crypto-asset service providers).",
           "$ref": "#/$defs/DoraCriticality"
         },
         "gdpr": {
-          "description": "GDPR data protection role and data residency boundaries.",
+          "description": "GDPR data protection role and data residency boundaries.\n\n### Applicability Scope\nApplies to **any project that processes, stores, transmits, or logs personal data** (PII/SPI) belonging to individuals located in the EU/EEA.",
           "$ref": "#/$defs/GdprManifest"
         },
         "nis2": {
-          "description": "EU NIS2 Directive criticality classification (for non-financial critical infrastructure).",
+          "description": "EU NIS2 Directive criticality classification.\n\n### Applicability Scope\nApplies if the project supports **critical or important non-financial infrastructure** across the EU (such as energy, healthcare, transport, water, digital providers, SaaS marketplaces, or managed ICT services).",
           "$ref": "#/$defs/Nis2Category"
         }
       },
