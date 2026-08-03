@@ -82,6 +82,91 @@
     "layout"
   ],
   "$defs": {
+    "AdsLoggingStatus": {
+      "description": "Status of immutable AdS access log generation and retention.",
+      "oneOf": [
+        {
+          "description": "Immutable access logs recorded and retained for at least 6 months (standard).",
+          "type": "string",
+          "const": "immutable6-months"
+        },
+        {
+          "description": "Immutable access logs recorded and retained for at least 12 months (banking/health).",
+          "type": "string",
+          "const": "immutable12-months"
+        },
+        {
+          "description": "Logging is enabled but not tamper-proof or integrity-verified.",
+          "type": "string",
+          "const": "standard-logging-only"
+        },
+        {
+          "description": "Access logging is delegated to external cloud/infrastructure provider.",
+          "type": "string",
+          "const": "external-provider"
+        },
+        {
+          "description": "Logging is not implemented or disabled.",
+          "type": "string",
+          "const": "disabled"
+        }
+      ]
+    },
+    "AdsManifest": {
+      "description": "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance specification.",
+      "type": "object",
+      "properties": {
+        "latest_audit_date": {
+          "description": "Date when the last annual verification/audit was completed (ISO 8601 format: YYYY-MM-DD).",
+          "type": "string",
+          "format": "date"
+        },
+        "logging": {
+          "description": "Immutable access log retention status (login/logout/failed attempts).",
+          "$ref": "#/$defs/AdsLoggingStatus"
+        },
+        "nomination_executed": {
+          "description": "Whether formal designation letters ('Lettera di Nomina') have been executed.",
+          "type": "boolean"
+        },
+        "responsibility": {
+          "description": "Responsibility boundary for System Administration (AdS) operations.",
+          "$ref": "#/$defs/AdsResponsibility"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "responsibility",
+        "logging",
+        "nomination_executed",
+        "latest_audit_date"
+      ]
+    },
+    "AdsResponsibility": {
+      "description": "System Administrator (AdS) operational responsibility boundary.",
+      "oneOf": [
+        {
+          "description": "Our organization directly manages the system/infrastructure as AdS.",
+          "type": "string",
+          "const": "internal"
+        },
+        {
+          "description": "An external Managed Service Provider (MSP) / Vendor holds AdS duties.",
+          "type": "string",
+          "const": "external-processor"
+        },
+        {
+          "description": "The client / customer holds AdS responsibility for their own environment.",
+          "type": "string",
+          "const": "client-managed"
+        },
+        {
+          "description": "No AdS scope applies (no personal data processed or no privileged access).",
+          "type": "string",
+          "const": "not-applicable"
+        }
+      ]
+    },
     "AuthType": {
       "description": "Primary authentication mechanism for ingress requests.",
       "oneOf": [
@@ -156,6 +241,10 @@
       "description": "Regulatory compliance and cybersecurity resilience specifications.",
       "type": "object",
       "properties": {
+        "ads": {
+          "description": "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block.",
+          "$ref": "#/$defs/AdsManifest"
+        },
         "cra": {
           "description": "EU Cyber Resilience Act (CRA) product classification tier.",
           "$ref": "#/$defs/CraClass"
@@ -168,7 +257,8 @@
       "additionalProperties": false,
       "required": [
         "dora",
-        "cra"
+        "cra",
+        "ads"
       ]
     },
     "CraClass": {

@@ -60,8 +60,6 @@ pub struct PinchManifest {
     pub layout: Option<Vec<LayoutBlock>>,
 }
 
-
-
 #[doc = "High-level project identification, governance, and architecture classification."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -138,6 +136,73 @@ pub struct ComplianceManifest {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "CraClass")]
     pub cra: Option<CraClass>,
+
+    #[doc = "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "AdsManifest")]
+    pub ads: Option<AdsManifest>,
+}
+
+#[doc = "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance specification."]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AdsManifest {
+    #[doc = "Responsibility boundary for System Administration (AdS) operations."]
+    pub responsibility: AdsResponsibility,
+
+    #[doc = "Immutable access log retention status (login/logout/failed attempts)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "AdsLoggingStatus")]
+    pub logging: Option<AdsLoggingStatus>,
+
+    #[doc = "Whether formal designation letters ('Lettera di Nomina') have been executed."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
+    pub nomination_executed: Option<bool>,
+
+    #[doc = "Date when the last annual verification/audit was completed (ISO 8601 format: YYYY-MM-DD)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(schema_with = "iso_date_schema")]
+    pub latest_audit_date: Option<String>,
+}
+
+#[doc = "System Administrator (AdS) operational responsibility boundary."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum AdsResponsibility {
+    #[doc = "Our organization directly manages the system/infrastructure as AdS."]
+    Internal,
+
+    #[doc = "An external Managed Service Provider (MSP) / Vendor holds AdS duties."]
+    ExternalProcessor,
+
+    #[doc = "The client / customer holds AdS responsibility for their own environment."]
+    ClientManaged,
+
+    #[doc = "No AdS scope applies (no personal data processed or no privileged access)."]
+    NotApplicable,
+}
+
+#[doc = "Status of immutable AdS access log generation and retention."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum AdsLoggingStatus {
+    #[doc = "Immutable access logs recorded and retained for at least 6 months (standard)."]
+    Immutable6Months,
+
+    #[doc = "Immutable access logs recorded and retained for at least 12 months (banking/health)."]
+    Immutable12Months,
+
+    #[doc = "Logging is enabled but not tamper-proof or integrity-verified."]
+    StandardLoggingOnly,
+
+    #[doc = "Access logging is delegated to external cloud/infrastructure provider."]
+    ExternalProvider,
+
+    #[doc = "Logging is not implemented or disabled."]
+    Disabled,
 }
 
 #[doc = "DORA (Digital Operational Resilience Act) operational criticality tag."]
@@ -573,6 +638,14 @@ fn environments_schema(generator: &mut SchemaGenerator) -> Schema {
         "type": "object",
         "properties": properties,
         "additionalProperties": false
+    });
+    serde_json::from_value(schema_val).expect("valid schema")
+}
+
+fn iso_date_schema(_generator: &mut SchemaGenerator) -> Schema {
+    let schema_val = serde_json::json!({
+        "type": "string",
+        "format": "date"
     });
     serde_json::from_value(schema_val).expect("valid schema")
 }
