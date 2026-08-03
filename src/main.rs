@@ -8,18 +8,9 @@ mod ui;
 mod vars;
 
 use crate::config::RunMode;
-use crossterm::event::EventStream;
-use futures::StreamExt;
 use std::fs::File;
 use std::io::BufReader;
 use std::os::unix::process::CommandExt;
-use std::panic;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use supervisor::Supervisor;
-use supervisor::SupervisorEvent;
-use tokio::sync::mpsc;
-use tokio::time::{Duration, interval};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let parsed = cli::parse_args();
@@ -72,15 +63,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         cli::CliAction::Process(cmd) => match cmd {
-            cli::ProcessCommand::Ls => {
-                println!("Available process titles in '{}':", config_path);
-                if let Some(processes) = raw_config.processes {
-                    for proc in processes {
-                        println!("  - {}", proc.title);
-                    }
-                } else {
-                    println!("  (No processes defined)");
-                }
+            cli::ProcessCommand::Ls { format } => {
+                cli::list_processes(&raw_config, format)?;
                 return Ok(());
             }
             cli::ProcessCommand::Show { title, format } => {
@@ -114,9 +98,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         },
         cli::CliAction::Networks(cmd) => match cmd {
-            cli::NetCommand::Ls => {
-                println!("Available Docker networks in '{}':", config_path);
-                cli::list_networks(&raw_config);
+            cli::NetCommand::Ls { format } => {
+                cli::list_networks(&raw_config, format)?;
                 return Ok(());
             }
             cli::NetCommand::Show { name, format } => {
@@ -143,80 +126,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let config = raw_config.prepare(parsed.vars.clone(), false)?;
             networks::create_networks(&raw_config, &parsed.vars, None)?;
             let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
-            rt.block_on(async {
-                let mut guard = ui::terminal::TerminalGuard::init()?;
-                let (tx_ui, rx_ui) = mpsc::channel::<SupervisorEvent>(100);
-                let (tx_logs, rx_logs) = mpsc::channel::<SupervisorEvent>(10_000);
-                let is_running = Arc::new(AtomicBool::new(true));
-                let tx_signal = tx_ui.clone();
-                let signal_handle = tokio::spawn(async move {
-                    use tokio::signal::unix::{SignalKind, signal};
-                    let mut sigterm = match signal(SignalKind::terminate()) {
-                        Ok(s) => s,
-                        Err(_) => return,
-                    };
-                    tokio::select! {
-                        _ = tokio::signal::ctrl_c() => {}
-                        _ = sigterm.recv() => {}
-                    }
-                    let _ = tx_signal.send(SupervisorEvent::Error("SIGINT/SIGTERM received".to_string())).await;
-                });
-                let watcher_handle = supervisor::watchers::start_watcher(&config, tx_ui.clone(), Arc::clone(&is_running))?;
-                let tx_input = tx_ui.clone();
-                let input_handle = tokio::spawn(async move {
-                    let mut tick_interval = interval(Duration::from_millis(500));
-                    let mut event_stream = EventStream::new();
-                    loop {
-                        tokio::select! {
-                            _ = tick_interval.tick() => {
-                                if tx_input.send(SupervisorEvent::SupervisorTick).await.is_err() {
-                                    break;
-                                }
-                            }
-                            Some(event_result) = event_stream.next() => {
-                                match event_result {
-                                    Ok(raw_event) => {
-                                        if tx_input.send(SupervisorEvent::Input(raw_event)).await.is_err() {
-                                            break;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        let _ = tx_input.send(SupervisorEvent::Error(format!("Terminal input error: {}", e))).await;
-                                        break;
-                                    }
-                                }
-                            }
-                            else => break,
-                        }
-                    }
-                });
-                let mut supervisor = Supervisor::new(config, tx_ui, tx_logs);
-                let run_result = supervisor.run(&mut guard.terminal, rx_ui, rx_logs).await;
-                // signal tasks to stop
-                is_running.store(false, Ordering::SeqCst);
-                input_handle.abort();
-                signal_handle.abort();
-                // terminate processes before restoring terminal
-                let shutdown_handles = supervisor.shutdown();
-
-                //restore terminal so user sees standard stdout/stderr
-                drop(guard);
-                // inform user on standard stdout while child processes drain
-                if !shutdown_handles.is_empty() {
-                    println!("Pinch: Waiting for child processes to terminate...");
-                    for handle in shutdown_handles {
-                        let _ = handle.await;
-                    }
-                }
-                let _ = watcher_handle.await;
-                if let Err(err) = run_result {
-                    if err != "SIGINT/SIGTERM received" {
-                        eprintln!("\n[Pinch Error]: {}", err);
-                        std::process::exit(1);
-                    }
-                }
-                Ok::<(), Box<dyn std::error::Error>>(())
-            })?;
+            rt.block_on(ui::tui::run_tui(config))?;
         }
         cli::CliAction::Completion(_) => unreachable!(),
     }

@@ -18,6 +18,26 @@ pub fn render_single<T: Serialize + std::fmt::Display>(value: &T, format: Option
     Ok(())
 }
 
+pub fn render_list<T: Serialize + std::fmt::Display>(list: &[T], format: Option<OutputFormat>) -> Result<(), String> {
+    match format.unwrap_or(OutputFormat::Raw) {
+        OutputFormat::Raw | OutputFormat::Properties => {
+            for item in list {
+                println!("{}", item);
+            }
+        }
+        OutputFormat::Yaml => {
+            let yaml_str = serde_yaml::to_string(list).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
+            print!("{}", yaml_str);
+        }
+        OutputFormat::Json => {
+            let json_str =
+                serde_json::to_string_pretty(list).map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
+            println!("{}", json_str);
+        }
+    }
+    Ok(())
+}
+
 pub fn render_map<K, V>(map: &BTreeMap<K, V>, format: Option<OutputFormat>) -> Result<(), String>
 where
     K: std::fmt::Display + Serialize,

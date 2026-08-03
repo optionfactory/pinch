@@ -1,10 +1,19 @@
-use serde::Serialize;
-
-use crate::cli::{format_command_args, render_map, render_single};
+use crate::cli::{format_command_args, render_list, render_map, render_single};
 use crate::config::{OutputFormat, PinchManifest, ProjectManifest};
 use crate::networks::build_docker_network_command;
 use crate::vars::apply_vars;
+use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+
+pub fn list_processes(manifest: &PinchManifest, format: Option<OutputFormat>) -> Result<(), String> {
+    let mut titles = Vec::new();
+    if let Some(processes) = &manifest.processes {
+        for proc in processes {
+            titles.push(proc.title.clone());
+        }
+    }
+    render_list(&titles, format)
+}
 
 pub fn show_vars(
     manifest: &PinchManifest,
@@ -13,7 +22,6 @@ pub fn show_vars(
     format: Option<OutputFormat>,
 ) -> Result<(), String> {
     let context_vars = manifest.resolve_vars(cli_vars);
-
     if let Some(name) = target {
         let Some(val) = context_vars.get(name) else {
             return Err(format!("Variable '{}' not found in configuration", name));
@@ -38,8 +46,22 @@ pub fn show_project(manifest: &PinchManifest, format: Option<OutputFormat>) -> R
                 serde_json::to_string_pretty(project).map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
             println!("{}", json_str);
         }
-        OutputFormat::Raw | OutputFormat::Properties => {
-            println!("{:#?}", project);
+        OutputFormat::Properties | OutputFormat::Raw => {
+            let mut map = BTreeMap::new();
+            map.insert("name", project.name.clone());
+            if let Some(t) = &project.project_type {
+                map.insert("type", format!("{:?}", t).to_lowercase());
+            }
+            if let Some(e) = &project.exposure {
+                map.insert("exposure", format!("{:?}", e).to_lowercase());
+            }
+            if let Some(l) = &project.lifecycle {
+                map.insert("lifecycle", format!("{:?}", l).to_lowercase());
+            }
+            if let Some(a) = &project.auth {
+                map.insert("auth", format!("{:?}", a).to_lowercase());
+            }
+            render_map(&map, format)?;
         }
     }
     Ok(())
@@ -62,7 +84,8 @@ pub fn show_config(
             println!("{}", json_str);
         }
         OutputFormat::Raw | OutputFormat::Properties => {
-            println!("{:#?}", config);
+            let yaml_str = serde_yaml::to_string(&config).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
+            print!("{}", yaml_str);
         }
     }
     Ok(())
@@ -75,7 +98,6 @@ pub fn show_processes(
     format: Option<OutputFormat>,
 ) -> Result<(), String> {
     let config = manifest.prepare(cli_vars.clone(), false)?;
-
     if let Some(title) = target {
         let Some(proc) = config.processes.iter().find(|p| p.title == title) else {
             return Err(format!("Process with title '{}' not found in configuration", title));
@@ -92,14 +114,14 @@ pub fn show_processes(
     Ok(())
 }
 
-pub fn list_networks(manifest: &PinchManifest) {
+pub fn list_networks(manifest: &PinchManifest, format: Option<OutputFormat>) -> Result<(), String> {
+    let mut net_names = Vec::new();
     if let Some(networks) = &manifest.docker_networks {
         for name in networks.keys() {
-            println!("  - {}", name);
+            net_names.push(name.clone());
         }
-    } else {
-        println!("  (No networks defined)");
     }
+    render_list(&net_names, format)
 }
 
 pub fn show_networks(
@@ -109,7 +131,6 @@ pub fn show_networks(
     format: Option<OutputFormat>,
 ) -> Result<(), String> {
     let context_vars = manifest.resolve_vars(cli_vars);
-
     if let Some(networks) = &manifest.docker_networks {
         if let Some(name) = target {
             let Some(config) = networks.get(name) else {
@@ -130,25 +151,24 @@ pub fn show_networks(
     } else if let Some(t) = target {
         Err(format!("Network '{}' not found in configuration", t))
     } else {
-        println!("(No Docker networks defined)");
+        let empty_map: BTreeMap<String, String> = BTreeMap::new();
+        render_map(&empty_map, format)?;
         Ok(())
     }
 }
 
 fn used_containers(manifest: &PinchManifest, context_vars: &HashMap<String, String>) -> Result<BTreeSet<String>, String> {
     let mut images = BTreeSet::new();
-
     if let Some(processes) = &manifest.processes {
         for proc in processes {
             if let crate::config::RunManifest::Detailed(crate::config::RunKind::Docker(ref docker_cfg)) = proc.run {
-                let resolved_image = apply_vars(&docker_cfg.image, &context_vars, false);
+                let resolved_image = apply_vars(&docker_cfg.image, context_vars, false);
                 images.insert(resolved_image);
             }
         }
     }
     Ok(images)
 }
-
 
 pub fn list_images(
     manifest: &PinchManifest,
@@ -157,25 +177,8 @@ pub fn list_images(
 ) -> Result<(), String> {
     let context_vars = manifest.resolve_vars(cli_vars);
     let containers = used_containers(manifest, &context_vars)?;
-
-    let chosen_format = format.unwrap_or(OutputFormat::Raw);
-    match chosen_format {
-        OutputFormat::Raw | OutputFormat::Properties => {
-            for img in &containers {
-                println!("{}", img);
-            }
-        }
-        OutputFormat::Yaml => {
-            let yaml_str = serde_yaml::to_string(&containers).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
-            print!("{}", yaml_str);
-        }
-        OutputFormat::Json => {
-            let json_str =
-                serde_json::to_string_pretty(&containers).map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
-            println!("{}", json_str);
-        }
-    }
-    Ok(())
+    let images: Vec<String> = containers.into_iter().collect();
+    render_list(&images, format)
 }
 
 #[derive(Debug, Serialize)]
@@ -191,12 +194,10 @@ pub fn show_audit(
 ) -> Result<(), String> {
     let context_vars = manifest.resolve_vars(cli_vars);
     let containers = used_containers(manifest, &context_vars)?;
-
     let report = AuditReport {
         project: &manifest.project,
         containers: containers.into_iter().collect(),
     };
-
     match format.unwrap_or(OutputFormat::Json) {
         OutputFormat::Json => {
             let json_str = serde_json::to_string_pretty(&report)
@@ -209,9 +210,10 @@ pub fn show_audit(
             print!("{}", yaml_str);
         }
         OutputFormat::Raw | OutputFormat::Properties => {
-            println!("{:#?}", report);
+            let json_str = serde_json::to_string_pretty(&report)
+                .map_err(|e| format!("Failed to serialize audit report to JSON: {}", e))?;
+            println!("{}", json_str);
         }
     }
-
     Ok(())
 }

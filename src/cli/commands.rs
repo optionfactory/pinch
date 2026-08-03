@@ -24,6 +24,7 @@ pub struct Cli {
         global = true
     )]
     pub config_file: String,
+
     #[arg(
         short = 'o',
         long = "override",
@@ -32,6 +33,7 @@ pub struct Cli {
         global = true
     )]
     pub overrides: Vec<(String, String)>,
+
     #[command(subcommand)]
     pub command: Option<Commands>,
 }
@@ -104,13 +106,29 @@ pub enum ProcessesSubcommand {
         format: Option<OutputFormat>,
     },
     #[command(about = "List all available process titles from the configuration")]
-    Ls,
+    Ls {
+        #[arg(
+            short = 'f',
+            long = "format",
+            help = "Output format (defaults to 'raw')",
+            value_enum
+        )]
+        format: Option<OutputFormat>,
+    },
 }
 
 #[derive(Subcommand, Debug)]
 pub enum NetworksSubcommand {
     #[command(about = "List all Docker networks defined in the configuration")]
-    Ls,
+    Ls {
+        #[arg(
+            short = 'f',
+            long = "format",
+            help = "Output format (defaults to 'raw')",
+            value_enum
+        )]
+        format: Option<OutputFormat>,
+    },
     #[command(about = "Show the docker network create command for a specific network (or all if omitted)")]
     Show {
         #[arg(help = "Optional target network name")]
@@ -153,11 +171,6 @@ pub enum ProjectSubcommand {
     },
 }
 
-#[derive(Debug)]
-pub enum ProjectCommand {
-    Show { format: Option<OutputFormat> },
-}
-
 #[derive(Subcommand, Debug)]
 pub enum ConfigSubcommand {
     #[command(about = "Generate a default configuration file in the current directory")]
@@ -187,26 +200,10 @@ pub enum ConfigSubcommand {
 }
 
 #[derive(Debug)]
-pub enum AuditCommand {
-    Show { format: Option<OutputFormat> },
-}
-
-#[derive(ValueEnum, Clone, Debug)]
-pub enum Shell {
-    Bash,
-    Zsh,
-    Fish,
-}
-
-fn parse_key_val(s: &str) -> Result<(String, String), String> {
-    s.split_once(':')
-        .map(|(k, v)| (k.to_string(), v.to_string()))
-        .ok_or_else(|| format!("Invalid --override format '{}'. Expected key:value", s))
-}
-
-#[derive(Debug)]
 pub enum ProcessCommand {
-    Ls,
+    Ls {
+        format: Option<OutputFormat>,
+    },
     Show {
         title: Option<String>,
         format: Option<OutputFormat>,
@@ -219,7 +216,9 @@ pub enum ProcessCommand {
 
 #[derive(Debug)]
 pub enum NetCommand {
-    Ls,
+    Ls {
+        format: Option<OutputFormat>,
+    },
     Show {
         name: Option<String>,
         format: Option<OutputFormat>,
@@ -235,6 +234,11 @@ pub enum ContainerCommand {
 }
 
 #[derive(Debug)]
+pub enum ProjectCommand {
+    Show { format: Option<OutputFormat> },
+}
+
+#[derive(Debug)]
 pub enum ConfigCommand {
     Init,
     Show {
@@ -244,6 +248,18 @@ pub enum ConfigCommand {
         name: Option<String>,
         format: Option<OutputFormat>,
     },
+}
+
+#[derive(Debug)]
+pub enum AuditCommand {
+    Show { format: Option<OutputFormat> },
+}
+
+#[derive(ValueEnum, Clone, Debug)]
+pub enum Shell {
+    Bash,
+    Zsh,
+    Fish,
 }
 
 #[derive(Debug)]
@@ -265,20 +281,29 @@ pub struct ParsedCli {
     pub action: CliAction,
 }
 
+fn parse_key_val(s: &str) -> Result<(String, String), String> {
+    s.split_once(':')
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .ok_or_else(|| format!("Invalid --override format '{}'. Expected key:value", s))
+}
+
 pub fn parse_args() -> ParsedCli {
     let cli = Cli::parse();
+
     let config_file = cli.config_file;
     let config_file = if config_file == "-" {
         "/dev/stdin".to_string()
     } else {
         config_file
     };
+
     let vars: HashMap<String, String> = cli.overrides.into_iter().collect();
+
     let action = match cli.command {
         Some(Commands::Tui) | None => CliAction::Tui,
         Some(Commands::Processes { command }) => {
             let cmd = match command {
-                ProcessesSubcommand::Ls => ProcessCommand::Ls,
+                ProcessesSubcommand::Ls { format } => ProcessCommand::Ls { format },
                 ProcessesSubcommand::Show { title, format } => ProcessCommand::Show { title, format },
                 ProcessesSubcommand::Run { title, background } => ProcessCommand::Run { title, background },
             };
@@ -286,7 +311,7 @@ pub fn parse_args() -> ParsedCli {
         }
         Some(Commands::Networks { command }) => {
             let cmd = match command {
-                NetworksSubcommand::Ls => NetCommand::Ls,
+                NetworksSubcommand::Ls { format } => NetCommand::Ls { format },
                 NetworksSubcommand::Show { name, format } => NetCommand::Show { name, format },
                 NetworksSubcommand::Create { name } => NetCommand::Create { name },
             };
@@ -315,6 +340,7 @@ pub fn parse_args() -> ParsedCli {
         Some(Commands::Audit { format }) => CliAction::Audit(AuditCommand::Show { format }),
         Some(Commands::Completion { shell }) => CliAction::Completion(shell),
     };
+
     ParsedCli {
         config_file,
         vars,
