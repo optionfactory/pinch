@@ -6,62 +6,41 @@
   "properties": {
     "auto_restart": {
       "description": "Whether processes restart automatically if they exit or crash (default: `true`).",
-      "type": [
-        "boolean",
-        "null"
-      ]
+      "type": "boolean"
     },
     "auto_start": {
       "description": "Whether processes start automatically upon launching the supervisor (default: `true`).",
-      "type": [
-        "boolean",
-        "null"
-      ]
+      "type": "boolean"
     },
     "docker_networks": {
       "description": "Custom Docker bridge networks managed and initialized by Pinch.",
-      "type": [
-        "object",
-        "null"
-      ],
+      "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/DockerNetworkConfig"
       }
     },
     "grace_period": {
       "description": "Delay in milliseconds before automatically restarting a process after an exit (default: `3000`).",
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": "integer",
       "format": "uint64",
       "minimum": 0
     },
     "layout": {
       "description": "Progressive edge-carving layout rules defining how process panes are arranged.",
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": "array",
       "items": {
         "$ref": "#/$defs/LayoutBlock"
       }
     },
     "logs_max_size": {
       "description": "Maximum number of log lines to retain in memory per process pane.",
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": "integer",
       "format": "uint",
       "minimum": 0
     },
     "processes": {
       "description": "List of supervised processes, containers, and background services to execute.",
-      "type": [
-        "array",
-        "null"
-      ],
+      "type": "array",
       "items": {
         "$ref": "#/$defs/ProcessManifest"
       }
@@ -72,53 +51,69 @@
     },
     "shell": {
       "description": "If true, executes shorthand command strings using `bash -c` globally (default: `false`).",
-      "type": [
-        "boolean",
-        "null"
-      ]
+      "type": "boolean"
     },
     "vars": {
       "description": "Custom configuration variables available for string expansion (e.g., `{{var_name}}`).",
-      "type": [
-        "object",
-        "null"
-      ],
+      "type": "object",
       "additionalProperties": {
         "type": "string"
       }
     },
     "watch_settle_time_ms": {
       "description": "Debounce delay in milliseconds when watching files for auto-restarting (default: `800`).",
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": "integer",
       "format": "uint64",
       "minimum": 0
     }
   },
   "additionalProperties": false,
   "required": [
-    "project"
+    "project",
+    "vars",
+    "processes",
+    "logs_max_size",
+    "auto_start",
+    "auto_restart",
+    "grace_period",
+    "shell",
+    "docker_networks",
+    "watch_settle_time_ms",
+    "layout"
   ],
   "$defs": {
     "AuthType": {
       "description": "Primary authentication mechanism for ingress requests.",
       "oneOf": [
         {
-          "description": "Identity provider.",
+          "description": "Identity provider abstraction.",
           "type": "string",
           "const": "idp"
         },
         {
-          "description": "Generic OAuth 2.0.",
+          "description": "OpenID Connect (OIDC) identity authentication layer.",
+          "type": "string",
+          "const": "oidc"
+        },
+        {
+          "description": "Generic OAuth 2.0 framework.",
           "type": "string",
           "const": "oauth2"
         },
         {
-          "description": "Generic SAML.",
+          "description": "Generic SAML 2.0 Web SSO.",
           "type": "string",
           "const": "saml"
+        },
+        {
+          "description": "API Key header or query parameter validation.",
+          "type": "string",
+          "const": "api-key"
+        },
+        {
+          "description": "Stateless JSON Web Token (JWT) signature validation.",
+          "type": "string",
+          "const": "jwt"
         },
         {
           "description": "Mutual TLS client certificate authentication.",
@@ -126,7 +121,17 @@
           "const": "mtls"
         },
         {
-          "description": "Custom token authentication.",
+          "description": "HMAC request signature validation (e.g., webhooks).",
+          "type": "string",
+          "const": "hmac"
+        },
+        {
+          "description": "Stateful cookie or HTTP session authentication.",
+          "type": "string",
+          "const": "session"
+        },
+        {
+          "description": "Custom bearer token or generic token authentication.",
           "type": "string",
           "const": "token"
         },
@@ -136,7 +141,7 @@
           "const": "basic"
         },
         {
-          "description": "Custom form authentication.",
+          "description": "Custom HTML form authentication.",
           "type": "string",
           "const": "form"
         },
@@ -144,6 +149,50 @@
           "description": "Unprotected public endpoint (no authentication required).",
           "type": "string",
           "const": "none"
+        }
+      ]
+    },
+    "ComplianceManifest": {
+      "description": "Regulatory compliance and cybersecurity resilience specifications.",
+      "type": "object",
+      "properties": {
+        "cra": {
+          "description": "EU Cyber Resilience Act (CRA) product classification tier.",
+          "$ref": "#/$defs/CraClass"
+        },
+        "dora": {
+          "description": "DORA (Digital Operational Resilience Act) criticality tag.",
+          "$ref": "#/$defs/DoraCriticality"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "dora",
+        "cra"
+      ]
+    },
+    "CraClass": {
+      "description": "EU Cyber Resilience Act (CRA) product classification tier for cybersecurity compliance.",
+      "oneOf": [
+        {
+          "description": "Default category: Standard software product with digital elements.",
+          "type": "string",
+          "const": "default"
+        },
+        {
+          "description": "Important Class I: Identity management, password managers, VPNs, network monitors.",
+          "type": "string",
+          "const": "important-class1"
+        },
+        {
+          "description": "Important Class II: Hypervisors, container runtimes, firewalls, IDS/IPS.",
+          "type": "string",
+          "const": "important-class2"
+        },
+        {
+          "description": "Critical: Smartcards, hardware security modules, and core cryptographic hardware/software.",
+          "type": "string",
+          "const": "critical"
         }
       ]
     },
@@ -160,10 +209,7 @@
           "properties": {
             "args": {
               "description": "Custom CLI arguments passed to `docker network create`.",
-              "type": [
-                "array",
-                "null"
-              ],
+              "type": "array",
               "items": {
                 "type": "string"
               }
@@ -175,7 +221,8 @@
           },
           "additionalProperties": false,
           "required": [
-            "subnet"
+            "subnet",
+            "args"
           ]
         }
       ]
@@ -195,33 +242,42 @@
         }
       ]
     },
+    "DoraCriticality": {
+      "description": "DORA (Digital Operational Resilience Act) operational criticality tag.",
+      "oneOf": [
+        {
+          "description": "Supports a Critical or Important Function (CIF) subject to strict RTO/RPO SLAs.",
+          "type": "string",
+          "const": "cif-supported"
+        },
+        {
+          "description": "Non-critical ICT supporting service or internal developer utility.",
+          "type": "string",
+          "const": "non-critical"
+        }
+      ]
+    },
     "EnvironmentConfig": {
       "description": "Environment-specific deployment configuration.",
       "type": "object",
       "properties": {
         "domains": {
           "description": "Map of domain names to their management origin (managed vs external).",
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/DomainManagement"
           }
         },
         "exposure": {
           "description": "Network ingress reachability for this specific environment.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ExposureType"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/ExposureType"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "required": [
+        "exposure",
+        "domains"
+      ]
     },
     "ExposureType": {
       "description": "Network ingress reachability for the project.",
@@ -259,10 +315,7 @@
       "properties": {
         "direction": {
           "description": "Split orientation for sub-panes (`horizontal` or `vertical`).",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "edge": {
           "description": "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`).",
@@ -277,33 +330,28 @@
         },
         "splits": {
           "description": "Sub-panes to arrange within this carved edge block.",
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": "array",
           "items": {
             "$ref": "#/$defs/LayoutSplit"
           }
         },
         "title": {
           "description": "Target process title to place inside this block (or `\"Combined Logs\"`).",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "unassigned": {
           "description": "If true, automatically places all unassigned process panes inside this block.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
       "required": [
+        "title",
         "edge",
-        "size_percentage"
+        "size_percentage",
+        "direction",
+        "splits",
+        "unassigned"
       ]
     },
     "LayoutEdge": {
@@ -344,22 +392,18 @@
         },
         "title": {
           "description": "Target process title to place inside this split (or `\"Combined Logs\"`).",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "unassigned": {
           "description": "If true, automatically places all unassigned process panes inside this split.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": "boolean"
         }
       },
       "additionalProperties": false,
       "required": [
-        "size_percentage"
+        "title",
+        "size_percentage",
+        "unassigned"
       ]
     },
     "LifecycleType": {
@@ -408,51 +452,29 @@
       "properties": {
         "auto_restart": {
           "description": "Override global auto-restart default for this specific process.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": "boolean"
         },
         "auto_start": {
           "description": "Override global auto-start default for this specific process.",
-          "type": [
-            "boolean",
-            "null"
-          ]
+          "type": "boolean"
         },
         "cwd": {
           "description": "Working directory for process execution (supports variable expansion like `{{pwd}}`).",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "grace_period": {
           "description": "Override global grace period delay in milliseconds for this specific process.",
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": "integer",
           "format": "uint64",
           "minimum": 0
         },
         "link": {
           "description": "Optional web URL or link associated with this process (clickable in the TUI header).",
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "mode": {
           "description": "Display mode for the process output in the TUI dashboard (`log` or `tui`).",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PaneMode"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/PaneMode"
         },
         "run": {
           "description": "Execution definition specifying how the command or container is spawned.",
@@ -464,20 +486,14 @@
         },
         "watch": {
           "description": "List of file or directory paths that trigger an automatic restart when modified.",
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": "array",
           "items": {
             "type": "string"
           }
         },
         "watch_settle_time_ms": {
           "description": "Process-specific debounce delay in milliseconds for file watching.",
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": "integer",
           "format": "uint64",
           "minimum": 0
         }
@@ -485,33 +501,34 @@
       "additionalProperties": false,
       "required": [
         "title",
-        "run"
+        "run",
+        "cwd",
+        "link",
+        "watch",
+        "watch_settle_time_ms",
+        "mode",
+        "auto_start",
+        "auto_restart",
+        "grace_period"
       ]
     },
     "ProjectManifest": {
       "description": "High-level project identification, governance, and architecture classification.",
       "type": "object",
       "properties": {
-        "auth": {
-          "description": "Primary authentication mechanism for ingress requests.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/AuthType"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "authentication": {
+          "$ref": "#/$defs/AuthType"
+        },
+        "compliance": {
+          "description": "Regulatory compliance and resilience framework mappings.",
+          "$ref": "#/$defs/ComplianceManifest"
         },
         "environments": {
           "description": "Environment-specific deployment configurations.",
-          "type": [
-            "object",
-            "null"
-          ],
+          "type": "object",
           "properties": {
             "demo": {
-              "description": "Sales demo, customer sandbox, or PR preview environments.",
+              "description": "Sales demo, customer sandbox, or product preview environment.",
               "allOf": [
                 {
                   "$ref": "#/$defs/EnvironmentConfig"
@@ -519,7 +536,7 @@
               ]
             },
             "development": {
-              "description": "Local developer machines or active feature branch environments.",
+              "description": "Shared cloud or hosted development environment.",
               "allOf": [
                 {
                   "$ref": "#/$defs/EnvironmentConfig"
@@ -534,8 +551,32 @@
                 }
               ]
             },
-            "other": {
-              "description": "Uncategorized or custom specialized environment.",
+            "local": {
+              "description": "Local developer workstation or local machine loopback.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "performance": {
+              "description": "Dedicated load testing and performance benchmarking environment.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "pre-production": {
+              "description": "Near-exact production replica environment running parallel cutover validation (ambiente di parallelo).",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "preview": {
+              "description": "Short-lived, dynamic per-PR or per-branch preview environment.",
               "allOf": [
                 {
                   "$ref": "#/$defs/EnvironmentConfig"
@@ -558,8 +599,24 @@
                 }
               ]
             },
+            "sandbox": {
+              "description": "Isolated sandbox playground for external integrations and experimentation.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "shadow": {
+              "description": "Dark-launch or traffic-mirrored environment receiving real-time production traffic passively.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
             "staging": {
-              "description": "Pre-production mirror environment for final acceptance testing.",
+              "description": "Pre-production mirror environment for final release candidate acceptance.",
               "allOf": [
                 {
                   "$ref": "#/$defs/EnvironmentConfig"
@@ -567,7 +624,15 @@
               ]
             },
             "testing": {
-              "description": "Automated CI/CD integration and unit testing environments.",
+              "description": "Automated CI/CD integration and unit testing environment.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "uat": {
+              "description": "User Acceptance Testing environment for business stakeholder validation.",
               "allOf": [
                 {
                   "$ref": "#/$defs/EnvironmentConfig"
@@ -578,45 +643,29 @@
           "additionalProperties": false
         },
         "lifecycle": {
-          "description": "Operational maintenance status of the repository.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/LifecycleType"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/LifecycleType"
         },
         "name": {
-          "description": "Human-readable project title displayed at the top of the TUI dashboard.",
           "type": "string"
         },
         "sensitivity": {
-          "description": "Sensitive data classifications handled by the service.",
-          "type": [
-            "array",
-            "null"
-          ],
+          "type": "array",
           "items": {
             "$ref": "#/$defs/Sensitivity"
           }
         },
         "type": {
-          "description": "Primary architectural role of the project.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ProjectType"
-            },
-            {
-              "type": "null"
-            }
-          ]
+          "$ref": "#/$defs/ProjectType"
         }
       },
       "additionalProperties": false,
       "required": [
         "name",
+        "type",
+        "lifecycle",
+        "authentication",
+        "sensitivity",
+        "compliance",
         "environments"
       ]
     },
@@ -677,10 +726,7 @@
           "properties": {
             "args": {
               "description": "Arguments passed to the container's entrypoint.",
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             },
             "image": {
               "description": "The Docker image reference to run.",
@@ -688,10 +734,7 @@
             },
             "opts": {
               "description": "Arguments passed to `docker run --rm` (e.g., `--name`, `--network`, `--ip`).",
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             },
             "type": {
               "type": "string",
@@ -701,7 +744,9 @@
           "additionalProperties": false,
           "required": [
             "type",
-            "image"
+            "image",
+            "opts",
+            "args"
           ]
         },
         {
@@ -722,10 +767,7 @@
             },
             "network": {
               "description": "Target Docker network name (optional if exactly one network is defined in `docker_networks`).",
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": "string"
             },
             "type": {
               "type": "string",
@@ -736,6 +778,7 @@
           "required": [
             "type",
             "ip",
+            "network",
             "cmd"
           ]
         }
@@ -755,7 +798,7 @@
       ]
     },
     "Sensitivity": {
-      "description": "Sensitive data classifications handled by the service.",
+      "description": "Sensitive data classifications handled by the service.\n\n### Data Classification Hierarchy\n* **Public** → **Internal** → **Confidential** → **Restricted**\n\n### Regulatory Standards Covered\n* **GDPR / CCPA / BIPA:** `Pii`, `Spi`, `Biometric`\n* **PCI-DSS:** `Pci`\n* **SOX:** `Financial`\n* **HIPAA:** `Phi`",
       "oneOf": [
         {
           "description": "Non-sensitive data safe for public distribution.",
@@ -768,9 +811,14 @@
           "const": "internal"
         },
         {
-          "description": "Restricted company intellectual property or trade secrets.",
+          "description": "Restricted company intellectual property or business trade secrets.",
           "type": "string",
           "const": "confidential"
+        },
+        {
+          "description": "Maximum security assets requiring strict isolation (e.g., root credentials, master keys).",
+          "type": "string",
+          "const": "restricted"
         },
         {
           "description": "Personally Identifiable Information (names, emails, addresses).",
@@ -778,12 +826,27 @@
           "const": "pii"
         },
         {
-          "description": "Payment Card Industry data (credit cards, billing details).",
+          "description": "Sensitive PII / Special Category Data (genetics, political/religious beliefs under GDPR Art. 9).",
+          "type": "string",
+          "const": "spi"
+        },
+        {
+          "description": "Biometric identification data (fingerprints, facial recognition, voice signatures).",
+          "type": "string",
+          "const": "biometric"
+        },
+        {
+          "description": "Payment Card Industry data (credit cards, billing details, PANs).",
           "type": "string",
           "const": "pci"
         },
         {
-          "description": "Protected Health Information (medical records, insurance claims).",
+          "description": "Non-PCI financial records (SOX audit trails, payroll, company accounting, bank accounts).",
+          "type": "string",
+          "const": "financial"
+        },
+        {
+          "description": "Protected Health Information (medical records, insurance claims, health data).",
           "type": "string",
           "const": "phi"
         }

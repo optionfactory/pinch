@@ -1,7 +1,6 @@
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema, SchemaGenerator};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use schemars::{Schema, SchemaGenerator};
 
 #[doc = "Root configuration manifest for a Pinch project (`pinch.yaml`)."]
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -9,59 +8,90 @@ use schemars::{Schema, SchemaGenerator};
 pub struct PinchManifest {
     #[doc = "Core project metadata, governance attributes, and architecture classification."]
     pub project: ProjectManifest,
+
     #[doc = "Custom configuration variables available for string expansion (e.g., `{{var_name}}`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "HashMap<String, String>")]
     pub vars: Option<HashMap<String, String>>,
+
     #[doc = "List of supervised processes, containers, and background services to execute."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<ProcessManifest>")]
     pub processes: Option<Vec<ProcessManifest>>,
+
     #[doc = "Maximum number of log lines to retain in memory per process pane."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "usize")]
     pub logs_max_size: Option<usize>,
+
     #[doc = "Whether processes start automatically upon launching the supervisor (default: `true`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
     pub auto_start: Option<bool>,
+
     #[doc = "Whether processes restart automatically if they exit or crash (default: `true`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
     pub auto_restart: Option<bool>,
+
     #[doc = "Delay in milliseconds before automatically restarting a process after an exit (default: `3000`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "u64")]
     pub grace_period: Option<u64>,
+
     #[doc = "If true, executes shorthand command strings using `bash -c` globally (default: `false`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
     pub shell: Option<bool>,
+
     #[doc = "Custom Docker bridge networks managed and initialized by Pinch."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "HashMap<String, DockerNetworkConfig>")]
     pub docker_networks: Option<HashMap<String, DockerNetworkConfig>>,
+
     #[doc = "Debounce delay in milliseconds when watching files for auto-restarting (default: `800`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "u64")]
     pub watch_settle_time_ms: Option<u64>,
+
     #[doc = "Progressive edge-carving layout rules defining how process panes are arranged."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<LayoutBlock>")]
     pub layout: Option<Vec<LayoutBlock>>,
 }
+
+
 
 #[doc = "High-level project identification, governance, and architecture classification."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProjectManifest {
-    #[doc = "Human-readable project title displayed at the top of the TUI dashboard."]
     pub name: String,
-    #[doc = "Primary architectural role of the project."]
+
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "ProjectType")]
     pub project_type: Option<ProjectType>,
-    #[doc = "Operational maintenance status of the repository."]
+
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "LifecycleType")]
     pub lifecycle: Option<LifecycleType>,
-    #[doc = "Primary authentication mechanism for ingress requests."]
+
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub auth: Option<AuthType>,
-    #[doc = "Sensitive data classifications handled by the service."]
+    #[schemars(with = "AuthType")]
+    pub authentication: Option<AuthType>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<Sensitivity>")]
     pub sensitivity: Option<Vec<Sensitivity>>,
+
+    #[doc = "Regulatory compliance and resilience framework mappings."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "ComplianceManifest")]
+    pub compliance: Option<ComplianceManifest>,
+
     #[doc = "Environment-specific deployment configurations."]
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(schema_with = "environments_schema")]    
+    #[schemars(schema_with = "environments_schema")]
     pub environments: Option<BTreeMap<EnvironmentType, EnvironmentConfig>>,
 }
 
@@ -80,8 +110,6 @@ pub enum ProjectType {
     Job,
 }
 
-
-
 #[doc = "Operational maintenance status of the repository."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -97,7 +125,59 @@ pub enum LifecycleType {
     Prototype,
 }
 
-#[doc = "Sensitive data classifications handled by the service."]
+#[doc = "Regulatory compliance and cybersecurity resilience specifications."]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ComplianceManifest {
+    #[doc = "DORA (Digital Operational Resilience Act) criticality tag."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "DoraCriticality")]
+    pub dora: Option<DoraCriticality>,
+
+    #[doc = "EU Cyber Resilience Act (CRA) product classification tier."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "CraClass")]
+    pub cra: Option<CraClass>,
+}
+
+#[doc = "DORA (Digital Operational Resilience Act) operational criticality tag."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum DoraCriticality {
+    #[doc = "Supports a Critical or Important Function (CIF) subject to strict RTO/RPO SLAs."]
+    CifSupported,
+
+    #[doc = "Non-critical ICT supporting service or internal developer utility."]
+    NonCritical,
+}
+
+#[doc = "EU Cyber Resilience Act (CRA) product classification tier for cybersecurity compliance."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum CraClass {
+    #[doc = "Default category: Standard software product with digital elements."]
+    Default,
+
+    #[doc = "Important Class I: Identity management, password managers, VPNs, network monitors."]
+    ImportantClass1,
+
+    #[doc = "Important Class II: Hypervisors, container runtimes, firewalls, IDS/IPS."]
+    ImportantClass2,
+
+    #[doc = "Critical: Smartcards, hardware security modules, and core cryptographic hardware/software."]
+    Critical,
+}
+
+#[doc = "Sensitive data classifications handled by the service.\n\n\
+         ### Data Classification Hierarchy\n\
+         * **Public** → **Internal** → **Confidential** → **Restricted**\n\n\
+         ### Regulatory Standards Covered\n\
+         * **GDPR / CCPA / BIPA:** `Pii`, `Spi`, `Biometric`\n\
+         * **PCI-DSS:** `Pci`\n\
+         * **SOX:** `Financial`\n\
+         * **HIPAA:** `Phi`"]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
@@ -106,13 +186,21 @@ pub enum Sensitivity {
     Public,
     #[doc = "Standard internal business data."]
     Internal,
-    #[doc = "Restricted company intellectual property or trade secrets."]
+    #[doc = "Restricted company intellectual property or business trade secrets."]
     Confidential,
+    #[doc = "Maximum security assets requiring strict isolation (e.g., root credentials, master keys)."]
+    Restricted,
     #[doc = "Personally Identifiable Information (names, emails, addresses)."]
     Pii,
-    #[doc = "Payment Card Industry data (credit cards, billing details)."]
+    #[doc = "Sensitive PII / Special Category Data (genetics, political/religious beliefs under GDPR Art. 9)."]
+    Spi,
+    #[doc = "Biometric identification data (fingerprints, facial recognition, voice signatures)."]
+    Biometric,
+    #[doc = "Payment Card Industry data (credit cards, billing details, PANs)."]
     Pci,
-    #[doc = "Protected Health Information (medical records, insurance claims)."]
+    #[doc = "Non-PCI financial records (SOX audit trails, payroll, company accounting, bank accounts)."]
+    Financial,
+    #[doc = "Protected Health Information (medical records, insurance claims, health data)."]
     Phi,
 }
 
@@ -121,19 +209,29 @@ pub enum Sensitivity {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum AuthType {
-    #[doc = "Identity provider."]
+    #[doc = "Identity provider abstraction."]
     Idp,
-    #[doc = "Generic OAuth 2.0."]
+    #[doc = "OpenID Connect (OIDC) identity authentication layer."]
+    Oidc,
+    #[doc = "Generic OAuth 2.0 framework."]
     Oauth2,
-    #[doc = "Generic SAML."]
+    #[doc = "Generic SAML 2.0 Web SSO."]
     Saml,
+    #[doc = "API Key header or query parameter validation."]
+    ApiKey,
+    #[doc = "Stateless JSON Web Token (JWT) signature validation."]
+    Jwt,
     #[doc = "Mutual TLS client certificate authentication."]
     Mtls,
-    #[doc = "Custom token authentication."]
+    #[doc = "HMAC request signature validation (e.g., webhooks)."]
+    Hmac,
+    #[doc = "Stateful cookie or HTTP session authentication."]
+    Session,
+    #[doc = "Custom bearer token or generic token authentication."]
     Token,
     #[doc = "HTTP Basic authentication (legacy/internal)."]
     Basic,
-    #[doc = "Custom form authentication."]
+    #[doc = "Custom HTML form authentication."]
     Form,
     #[doc = "Unprotected public endpoint (no authentication required)."]
     None,
@@ -145,31 +243,48 @@ pub enum AuthType {
 pub struct ProcessManifest {
     #[doc = "Display name of the process pane in the TUI dashboard."]
     pub title: String,
+
     #[doc = "Execution definition specifying how the command or container is spawned."]
     pub run: RunManifest,
+
     #[doc = "Working directory for process execution (supports variable expansion like `{{pwd}}`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
     pub cwd: Option<String>,
+
     #[doc = "Optional web URL or link associated with this process (clickable in the TUI header)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
     pub link: Option<String>,
+
     #[doc = "List of file or directory paths that trigger an automatic restart when modified."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<String>")]
     pub watch: Option<Vec<String>>,
+
     #[doc = "Process-specific debounce delay in milliseconds for file watching."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "u64")]
     pub watch_settle_time_ms: Option<u64>,
+
     #[doc = "Display mode for the process output in the TUI dashboard (`log` or `tui`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "PaneMode")]
     pub mode: Option<PaneMode>,
+
     #[doc = "Override global auto-start default for this specific process."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
     pub auto_start: Option<bool>,
+
     #[doc = "Override global auto-restart default for this specific process."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
     pub auto_restart: Option<bool>,
+
     #[doc = "Override global grace period delay in milliseconds for this specific process."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "u64")]
     pub grace_period: Option<u64>,
 }
 
@@ -189,22 +304,34 @@ pub enum RunManifest {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum EnvironmentType {
-    #[doc = "Local developer machines or active feature branch environments."]
+    #[doc = "Local developer workstation or local machine loopback."]
+    Local,
+    #[doc = "Shared cloud or hosted development environment."]
     Development,
-    #[doc = "Automated CI/CD integration and unit testing environments."]
+    #[doc = "Short-lived, dynamic per-PR or per-branch preview environment."]
+    Preview,
+    #[doc = "Automated CI/CD integration and unit testing environment."]
     Testing,
     #[doc = "Dedicated Quality Assurance and manual regression environment."]
     Qa,
-    #[doc = "Pre-production mirror environment for final acceptance testing."]
+    #[doc = "User Acceptance Testing environment for business stakeholder validation."]
+    Uat,
+    #[doc = "Isolated sandbox playground for external integrations and experimentation."]
+    Sandbox,
+    #[doc = "Near-exact production replica environment running parallel cutover validation (ambiente di parallelo)."]
+    PreProduction,
+    #[doc = "Pre-production mirror environment for final release candidate acceptance."]
     Staging,
-    #[doc = "Sales demo, customer sandbox, or PR preview environments."]
+    #[doc = "Sales demo, customer sandbox, or product preview environment."]
     Demo,
+    #[doc = "Dedicated load testing and performance benchmarking environment."]
+    Performance,
+    #[doc = "Dark-launch or traffic-mirrored environment receiving real-time production traffic passively."]
+    Shadow,
     #[doc = "Live customer-facing production environment."]
     Production,
     #[doc = "Disaster recovery, warm standby, or secondary failover region."]
     DisasterRecovery,
-    #[doc = "Uncategorized or custom specialized environment."]
-    Other,
 }
 
 #[doc = "Environment-specific deployment configuration."]
@@ -213,10 +340,12 @@ pub enum EnvironmentType {
 pub struct EnvironmentConfig {
     #[doc = "Network ingress reachability for this specific environment."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "ExposureType")]
     pub exposure: Option<ExposureType>,
 
     #[doc = "Map of domain names to their management origin (managed vs external)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "BTreeMap<String, DomainManagement>")]
     pub domains: Option<BTreeMap<String, DomainManagement>>,
 }
 
@@ -280,9 +409,11 @@ pub struct DockerRunConfig {
     pub image: String,
     #[doc = "Arguments passed to `docker run --rm` (e.g., `--name`, `--network`, `--ip`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
     pub opts: Option<String>,
     #[doc = "Arguments passed to the container's entrypoint."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
     pub args: Option<String>,
 }
 
@@ -294,6 +425,7 @@ pub struct DockerIntrudeRunConfig {
     pub ip: String,
     #[doc = "Target Docker network name (optional if exactly one network is defined in `docker_networks`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
     pub network: Option<String>,
     #[doc = "Whether to wrap the command string in `bash -c` (default: `false`)."]
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -308,19 +440,28 @@ pub struct DockerIntrudeRunConfig {
 pub struct LayoutBlock {
     #[doc = "Target process title to place inside this block (or `\"Combined Logs\"`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
     pub title: Option<String>,
+
     #[doc = "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`)."]
     pub edge: LayoutEdge,
+
     #[doc = "Percentage of currently available space to allocate (0 to 100)."]
     pub size_percentage: u16,
+
     #[doc = "Split orientation for sub-panes (`horizontal` or `vertical`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
     pub direction: Option<String>,
+
     #[doc = "Sub-panes to arrange within this carved edge block."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<LayoutSplit>")]
     pub splits: Option<Vec<LayoutSplit>>,
+
     #[doc = "If true, automatically places all unassigned process panes inside this block."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
     pub unassigned: Option<bool>,
 }
 
@@ -341,11 +482,15 @@ pub enum PaneMode {
 pub struct LayoutSplit {
     #[doc = "Target process title to place inside this split (or `\"Combined Logs\"`)."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
     pub title: Option<String>,
+
     #[doc = "Percentage of space within the parent block to allocate (0 to 100)."]
     pub size_percentage: u16,
+
     #[doc = "If true, automatically places all unassigned process panes inside this split."]
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
     pub unassigned: Option<bool>,
 }
 
@@ -377,6 +522,7 @@ pub enum DockerNetworkConfig {
         subnet: String,
         #[doc = "Custom CLI arguments passed to `docker network create`."]
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[schemars(with = "Vec<String>")]
         args: Option<Vec<String>>,
     },
 }
@@ -396,7 +542,6 @@ impl DockerNetworkConfig {
         }
     }
 }
-
 
 fn environments_schema(generator: &mut SchemaGenerator) -> Schema {
     let env_config_schema = generator.subschema_for::<EnvironmentConfig>();
@@ -425,7 +570,7 @@ fn environments_schema(generator: &mut SchemaGenerator) -> Schema {
     }
 
     let schema_val = serde_json::json!({
-        "type": ["object", "null"],
+        "type": "object",
         "properties": properties,
         "additionalProperties": false
     });
