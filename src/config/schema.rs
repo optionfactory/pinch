@@ -10,52 +10,52 @@ pub struct PinchManifest {
     pub project: ProjectManifest,
 
     #[doc = "Custom configuration variables available for string expansion (e.g., `{{var_name}}`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "HashMap<String, String>")]
     pub vars: Option<HashMap<String, String>>,
 
     #[doc = "List of supervised processes, containers, and background services to execute."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<ProcessManifest>")]
     pub processes: Option<Vec<ProcessManifest>>,
 
     #[doc = "Maximum number of log lines to retain in memory per process pane."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "usize")]
     pub logs_max_size: Option<usize>,
 
     #[doc = "Whether processes start automatically upon launching the supervisor (default: `true`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub auto_start: Option<bool>,
 
     #[doc = "Whether processes restart automatically if they exit or crash (default: `true`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub auto_restart: Option<bool>,
 
     #[doc = "Delay in milliseconds before automatically restarting a process after an exit (default: `3000`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "u64")]
     pub grace_period: Option<u64>,
 
     #[doc = "If true, executes shorthand command strings using `bash -c` globally (default: `false`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub shell: Option<bool>,
 
     #[doc = "Custom Docker bridge networks managed and initialized by Pinch."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "HashMap<String, DockerNetworkConfig>")]
     pub docker_networks: Option<HashMap<String, DockerNetworkConfig>>,
 
     #[doc = "Debounce delay in milliseconds when watching files for auto-restarting (default: `800`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "u64")]
     pub watch_settle_time_ms: Option<u64>,
 
     #[doc = "Progressive edge-carving layout rules defining how process panes are arranged."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<LayoutBlock>")]
     pub layout: Option<Vec<LayoutBlock>>,
 }
@@ -66,34 +66,34 @@ pub struct PinchManifest {
 pub struct ProjectManifest {
     pub name: String,
 
-    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "ProjectType")]
     pub project_type: Option<ProjectType>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "LifecycleType")]
     pub lifecycle: Option<LifecycleType>,
 
     #[doc = "Operational service tier dictating on-call priority and internal incident response targets."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "ServiceTier")]
     pub tier: Option<ServiceTier>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<AuthType>")]
     pub authentication: Option<Vec<AuthType>>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<Sensitivity>")]
     pub sensitivity: Option<Vec<Sensitivity>>,
 
     #[doc = "Regulatory compliance and resilience framework mappings."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "ComplianceManifest")]
     pub compliance: Option<ComplianceManifest>,
 
     #[doc = "Environment-specific deployment configurations."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(schema_with = "environments_schema")]
     pub environments: Option<BTreeMap<EnvironmentType, EnvironmentConfig>>,
 }
@@ -219,32 +219,32 @@ pub enum Sensitivity {
 #[serde(deny_unknown_fields)]
 pub struct ComplianceManifest {
     #[doc = "DORA (Digital Operational Resilience Act) criticality tag."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "DoraCriticality")]
     pub dora: Option<DoraCriticality>,
 
     #[doc = "EU Cyber Resilience Act (CRA) product classification tier."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "CraClass")]
     pub cra: Option<CraClass>,
 
     #[doc = "EU NIS2 Directive criticality classification (for non-financial critical infrastructure)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Nis2Category")]
     pub nis2: Option<Nis2Category>,
 
     #[doc = "EU AI Act risk classification tier."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AiActClass")]
     pub ai_act: Option<AiActClass>,
 
     #[doc = "GDPR data protection role and data residency boundaries."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "GdprManifest")]
     pub gdpr: Option<GdprManifest>,
 
     #[doc = "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AdsManifest")]
     pub ads: Option<AdsManifest>,
 }
@@ -287,7 +287,7 @@ pub struct GdprManifest {
     pub role: GdprRole,
 
     #[doc = "Whether personal data is processed or stored strictly within the EU/EEA."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub eu_residency_only: Option<bool>,
 }
@@ -345,17 +345,17 @@ pub struct AdsManifest {
     pub responsibility: AdsResponsibility,
 
     #[doc = "Immutable access log retention status (login/logout/failed attempts)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AdsLoggingStatus")]
     pub logging: Option<AdsLoggingStatus>,
 
     #[doc = "Whether formal designation letters ('Lettera di Nomina') have been executed."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub nomination_executed: Option<bool>,
 
     #[doc = "Date when the last annual verification/audit was completed (ISO 8601 format: YYYY-MM-DD)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(schema_with = "iso_date_schema")]
     pub latest_audit_date: Option<String>,
 }
@@ -439,12 +439,12 @@ pub enum EnvironmentType {
 #[serde(deny_unknown_fields)]
 pub struct EnvironmentConfig {
     #[doc = "Network ingress reachability for this specific environment."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "ExposureType")]
     pub exposure: Option<ExposureType>,
 
     #[doc = "Map of domain names to their management origin (managed vs external)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "BTreeMap<String, DomainManagement>")]
     pub domains: Option<BTreeMap<String, DomainManagement>>,
 }
@@ -488,42 +488,42 @@ pub struct ProcessManifest {
     pub run: RunManifest,
 
     #[doc = "Working directory for process execution (supports variable expansion like `{{pwd}}`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub cwd: Option<String>,
 
     #[doc = "Optional web URL or link associated with this process (clickable in the TUI header)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub link: Option<String>,
 
     #[doc = "List of file or directory paths that trigger an automatic restart when modified."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<String>")]
     pub watch: Option<Vec<String>>,
 
     #[doc = "Process-specific debounce delay in milliseconds for file watching."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "u64")]
     pub watch_settle_time_ms: Option<u64>,
 
     #[doc = "Display mode for the process output in the TUI dashboard (`log` or `tui`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "PaneMode")]
     pub mode: Option<PaneMode>,
 
     #[doc = "Override global auto-start default for this specific process."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub auto_start: Option<bool>,
 
     #[doc = "Override global auto-restart default for this specific process."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub auto_restart: Option<bool>,
 
     #[doc = "Override global grace period delay in milliseconds for this specific process."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "u64")]
     pub grace_period: Option<u64>,
 }
@@ -570,11 +570,11 @@ pub struct DockerRunConfig {
     #[doc = "The Docker image reference to run."]
     pub image: String,
     #[doc = "Arguments passed to `docker run --rm` (e.g., `--name`, `--network`, `--ip`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub opts: Option<String>,
     #[doc = "Arguments passed to the container's entrypoint."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub args: Option<String>,
 }
@@ -586,7 +586,7 @@ pub struct DockerIntrudeRunConfig {
     #[doc = "Static IP address assigned to the namespace container on the target bridge subnet."]
     pub ip: String,
     #[doc = "Target Docker network name (optional if exactly one network is defined in `docker_networks`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub network: Option<String>,
     #[doc = "Whether to wrap the command string in `bash -c` (default: `false`)."]
@@ -608,7 +608,7 @@ pub enum DockerNetworkConfig {
         #[doc = "CIDR subnet string for the bridge network."]
         subnet: String,
         #[doc = "Custom CLI arguments passed to `docker network create`."]
-        #[serde(skip_serializing_if = "Option::is_none")]
+        #[serde(default, skip_serializing_if = "Option::is_none")]
         #[schemars(with = "Vec<String>")]
         args: Option<Vec<String>>,
     },
@@ -646,7 +646,7 @@ pub enum PaneMode {
 #[serde(deny_unknown_fields)]
 pub struct LayoutBlock {
     #[doc = "Target process title to place inside this block (or `\"Combined Logs\"`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub title: Option<String>,
 
@@ -657,17 +657,17 @@ pub struct LayoutBlock {
     pub size_percentage: u16,
 
     #[doc = "Split orientation for sub-panes inside an edge-carved block."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "LayoutDirection")]
     pub direction: Option<LayoutDirection>,
 
     #[doc = "Sub-panes to arrange within this carved edge block."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<LayoutSplit>")]
     pub splits: Option<Vec<LayoutSplit>>,
 
     #[doc = "If true, automatically places all unassigned process panes inside this block."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub unassigned: Option<bool>,
 }
@@ -701,7 +701,7 @@ pub enum LayoutDirection {
 #[serde(deny_unknown_fields)]
 pub struct LayoutSplit {
     #[doc = "Target process title to place inside this split (or `\"Combined Logs\"`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub title: Option<String>,
 
@@ -709,7 +709,7 @@ pub struct LayoutSplit {
     pub size_percentage: u16,
 
     #[doc = "If true, automatically places all unassigned process panes inside this split."]
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub unassigned: Option<bool>,
 }

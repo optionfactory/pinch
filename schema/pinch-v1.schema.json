@@ -69,17 +69,7 @@
   },
   "additionalProperties": false,
   "required": [
-    "project",
-    "vars",
-    "processes",
-    "logs_max_size",
-    "auto_start",
-    "auto_restart",
-    "grace_period",
-    "shell",
-    "docker_networks",
-    "watch_settle_time_ms",
-    "layout"
+    "project"
   ],
   "$defs": {
     "AdsLoggingStatus": {
@@ -136,10 +126,7 @@
       },
       "additionalProperties": false,
       "required": [
-        "responsibility",
-        "logging",
-        "nomination_executed",
-        "latest_audit_date"
+        "responsibility"
       ]
     },
     "AdsResponsibility": {
@@ -301,15 +288,7 @@
           "$ref": "#/$defs/Nis2Category"
         }
       },
-      "additionalProperties": false,
-      "required": [
-        "dora",
-        "cra",
-        "nis2",
-        "ai_act",
-        "gdpr",
-        "ads"
-      ]
+      "additionalProperties": false
     },
     "CraClass": {
       "description": "EU Cyber Resilience Act (CRA) product classification tier for cybersecurity compliance.",
@@ -361,8 +340,7 @@
           },
           "additionalProperties": false,
           "required": [
-            "subnet",
-            "args"
+            "subnet"
           ]
         }
       ]
@@ -413,11 +391,7 @@
           "$ref": "#/$defs/ExposureType"
         }
       },
-      "additionalProperties": false,
-      "required": [
-        "exposure",
-        "domains"
-      ]
+      "additionalProperties": false
     },
     "ExposureType": {
       "description": "Network ingress reachability for the project.",
@@ -464,8 +438,7 @@
       },
       "additionalProperties": false,
       "required": [
-        "role",
-        "eu_residency_only"
+        "role"
       ]
     },
     "GdprRole": {
@@ -530,12 +503,8 @@
       },
       "additionalProperties": false,
       "required": [
-        "title",
         "edge",
-        "size_percentage",
-        "direction",
-        "splits",
-        "unassigned"
+        "size_percentage"
       ]
     },
     "LayoutDirection": {
@@ -593,9 +562,7 @@
       },
       "additionalProperties": false,
       "required": [
-        "title",
-        "size_percentage",
-        "unassigned"
+        "size_percentage"
       ]
     },
     "LifecycleType": {
@@ -713,15 +680,7 @@
       "additionalProperties": false,
       "required": [
         "title",
-        "run",
-        "cwd",
-        "link",
-        "watch",
-        "watch_settle_time_ms",
-        "mode",
-        "auto_start",
-        "auto_restart",
-        "grace_period"
+        "run"
       ]
     },
     "ProjectManifest": {
@@ -879,14 +838,7 @@
       },
       "additionalProperties": false,
       "required": [
-        "name",
-        "type",
-        "lifecycle",
-        "tier",
-        "authentication",
-        "sensitivity",
-        "compliance",
-        "environments"
+        "name"
       ]
     },
     "ProjectType": {
@@ -964,9 +916,7 @@
           "additionalProperties": false,
           "required": [
             "type",
-            "image",
-            "opts",
-            "args"
+            "image"
           ]
         },
         {
@@ -998,7 +948,6 @@
           "required": [
             "type",
             "ip",
-            "network",
             "cmd"
           ]
         }
