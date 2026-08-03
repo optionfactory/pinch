@@ -1,7 +1,7 @@
 # Pinch
 **The Executable Service Manifest & DevSecOps Supervisor**
 
-Pinch is a terminal-based process supervisor, developer workflow runner, and **lightweight "compliance-as-code" catalog** for modern engineering teams.
+Pinch is a terminal-based process supervisor, developer workflow runner, and **lightweight "compliance-as-code" catalog**.
 
 Most software projects suffer from a disconnect between execution and governance: traditional process runners know how to execute code but ignore ownership and SLAs, while dedicated compliance portals capture governance metadata but sit in separate systems that developers rarely visit after onboarding.
 
