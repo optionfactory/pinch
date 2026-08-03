@@ -9,14 +9,9 @@ mod vars;
 
 use crate::config::RunMode;
 use crossterm::event::EventStream;
-use crossterm::event::{self, DisableMouseCapture, EnableMouseCapture};
-use crossterm::execute;
-use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use futures::StreamExt;
-use ratatui::{Terminal, backend::CrosstermBackend};
 use std::fs::File;
-use std::io::{self, BufReader, Write};
+use std::io::BufReader;
 use std::os::unix::process::CommandExt;
 use std::panic;
 use std::sync::Arc;
@@ -26,27 +21,7 @@ use supervisor::SupervisorEvent;
 use tokio::sync::mpsc;
 use tokio::time::{Duration, interval};
 
-fn restore_terminal() {
-    let mut stdout = io::stdout();
-    let _ = execute!(stdout, DisableMouseCapture);
-    let start = std::time::Instant::now();
-    while start.elapsed() < std::time::Duration::from_millis(20) {
-        //prevent crossterm mouse events to spam the console with garbage
-        if let Ok(true) = event::poll(std::time::Duration::from_millis(5)) {
-            let _ = event::read();
-        }
-    }
-    let _ = execute!(stdout, LeaveAlternateScreen, crossterm::cursor::Show);
-    let _ = disable_raw_mode();
-    let _ = stdout.flush();
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let original_hook = panic::take_hook();
-    panic::set_hook(Box::new(move |panic_info| {
-        restore_terminal();
-        original_hook(panic_info);
-    }));
     let parsed = cli::parse_args();
     match &parsed.action {
         cli::CliAction::Completion(shell) => {
@@ -169,11 +144,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             networks::create_networks(&raw_config, &parsed.vars, None)?;
             let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
             rt.block_on(async {
-                enable_raw_mode()?;
-                let mut stdout = io::stdout();
-                execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-                let backend = CrosstermBackend::new(stdout);
-                let mut terminal = Terminal::new(backend)?;
+                let mut guard = ui::terminal::TerminalGuard::init()?;
                 let (tx_ui, rx_ui) = mpsc::channel::<SupervisorEvent>(100);
                 let (tx_logs, rx_logs) = mpsc::channel::<SupervisorEvent>(10_000);
                 let is_running = Arc::new(AtomicBool::new(true));
@@ -220,15 +191,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 });
                 let mut supervisor = Supervisor::new(config, tx_ui, tx_logs);
-                let run_result = supervisor.run(&mut terminal, rx_ui, rx_logs).await;
+                let run_result = supervisor.run(&mut guard.terminal, rx_ui, rx_logs).await;
                 // signal tasks to stop
                 is_running.store(false, Ordering::SeqCst);
                 input_handle.abort();
                 signal_handle.abort();
                 // terminate processes before restoring terminal
                 let shutdown_handles = supervisor.shutdown();
+
                 //restore terminal so user sees standard stdout/stderr
-                restore_terminal();
+                drop(guard);
                 // inform user on standard stdout while child processes drain
                 if !shutdown_handles.is_empty() {
                     println!("Pinch: Waiting for child processes to terminate...");
