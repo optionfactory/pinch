@@ -3,30 +3,40 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[doc = "Root configuration manifest for a Pinch project (`pinch.yaml`)."]
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PinchManifest {
     #[doc = "Core project metadata, governance attributes, and architecture classification."]
     pub project: ProjectManifest,
     #[doc = "Custom configuration variables available for string expansion (e.g., `{{var_name}}`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub vars: Option<HashMap<String, String>>,
     #[doc = "List of supervised processes, containers, and background services to execute."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub processes: Option<Vec<ProcessManifest>>,
     #[doc = "Maximum number of log lines to retain in memory per process pane."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub logs_max_size: Option<usize>,
     #[doc = "Whether processes start automatically upon launching the supervisor (default: `true`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_start: Option<bool>,
     #[doc = "Whether processes restart automatically if they exit or crash (default: `true`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_restart: Option<bool>,
     #[doc = "Delay in milliseconds before automatically restarting a process after an exit (default: `3000`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub grace_period: Option<u64>,
     #[doc = "If true, executes shorthand command strings using `bash -c` globally (default: `false`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub shell: Option<bool>,
     #[doc = "Custom Docker bridge networks managed and initialized by Pinch."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub docker_networks: Option<HashMap<String, DockerNetworkConfig>>,
     #[doc = "Debounce delay in milliseconds when watching files for auto-restarting (default: `800`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub watch_settle_time_ms: Option<u64>,
     #[doc = "Progressive edge-carving layout rules defining how process panes are arranged."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub layout: Option<Vec<LayoutBlock>>,
 }
 
@@ -36,19 +46,23 @@ pub struct PinchManifest {
 pub struct ProjectManifest {
     #[doc = "Human-readable project title displayed at the top of the TUI dashboard."]
     pub name: String,
-
     #[doc = "Primary architectural role of the project."]
-    #[serde(rename = "type")]
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub project_type: Option<ProjectType>,
     #[doc = "Network ingress reachability for the project."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub exposure: Option<ExposureType>,
     #[doc = "Operational maintenance status of the repository."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub lifecycle: Option<LifecycleType>,
     #[doc = "Primary authentication mechanism for ingress requests."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub auth: Option<AuthType>,
     #[doc = "Sensitive data classifications handled by the service."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sensitivity: Option<Vec<Sensitivity>>,
     #[doc = "List of deployment environments supported by this project (e.g., `dev`, `staging`, `prod`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub environments: Option<Vec<String>>,
 }
 
@@ -138,7 +152,7 @@ pub enum AuthType {
 }
 
 #[doc = "Configuration for an individual supervised process or container."]
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProcessManifest {
     #[doc = "Display name of the process pane in the TUI dashboard."]
@@ -146,25 +160,33 @@ pub struct ProcessManifest {
     #[doc = "Execution definition specifying how the command or container is spawned."]
     pub run: RunManifest,
     #[doc = "Working directory for process execution (supports variable expansion like `{{pwd}}`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub cwd: Option<String>,
     #[doc = "Optional web URL or link associated with this process (clickable in the TUI header)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub link: Option<String>,
     #[doc = "List of file or directory paths that trigger an automatic restart when modified."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub watch: Option<Vec<String>>,
     #[doc = "Process-specific debounce delay in milliseconds for file watching."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub watch_settle_time_ms: Option<u64>,
     #[doc = "Display mode for the process output in the TUI dashboard (`log` or `tui`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<PaneMode>,
     #[doc = "Override global auto-start default for this specific process."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_start: Option<bool>,
     #[doc = "Override global auto-restart default for this specific process."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub auto_restart: Option<bool>,
     #[doc = "Override global grace period delay in milliseconds for this specific process."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub grace_period: Option<u64>,
 }
 
 #[doc = "How the process command is specified in YAML."]
-#[derive(Debug, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(untagged)]
 #[serde(deny_unknown_fields)]
 pub enum RunManifest {
@@ -175,7 +197,7 @@ pub enum RunManifest {
 }
 
 #[doc = "Explicit runtime environment type for a supervised process."]
-#[derive(Debug, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum RunKind {
@@ -188,38 +210,41 @@ pub enum RunKind {
 }
 
 #[doc = "Configuration for executing a local OS process."]
-#[derive(Debug, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProcessRunConfig {
     #[doc = "Whether to wrap the command string in `bash -c` (default: `false`)."]
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub bash: bool,
     #[doc = "The command string to execute."]
     pub cmd: String,
 }
 
 #[doc = "Configuration for executing a Docker container."]
-#[derive(Debug, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DockerRunConfig {
     #[doc = "The Docker image reference to run."]
     pub image: String,
     #[doc = "Arguments passed to `docker run --rm` (e.g., `--name`, `--network`, `--ip`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub opts: Option<String>,
     #[doc = "Arguments passed to the container's entrypoint."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub args: Option<String>,
 }
 
 #[doc = "Configuration for executing a host binary inside a Docker network namespace."]
-#[derive(Debug, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DockerIntrudeRunConfig {
     #[doc = "Static IP address assigned to the namespace container on the target bridge subnet."]
     pub ip: String,
     #[doc = "Target Docker network name (optional if exactly one network is defined in `docker_networks`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub network: Option<String>,
     #[doc = "Whether to wrap the command string in `bash -c` (default: `false`)."]
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub bash: bool,
     #[doc = "Host command string to execute within the target network namespace."]
     pub cmd: String,
@@ -230,16 +255,20 @@ pub struct DockerIntrudeRunConfig {
 #[serde(deny_unknown_fields)]
 pub struct LayoutBlock {
     #[doc = "Target process title to place inside this block (or `\"Combined Logs\"`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     #[doc = "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`)."]
     pub edge: LayoutEdge,
     #[doc = "Percentage of currently available space to allocate (0 to 100)."]
     pub size_percentage: u16,
     #[doc = "Split orientation for sub-panes (`horizontal` or `vertical`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub direction: Option<String>,
     #[doc = "Sub-panes to arrange within this carved edge block."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub splits: Option<Vec<LayoutSplit>>,
     #[doc = "If true, automatically places all unassigned process panes inside this block."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub unassigned: Option<bool>,
 }
 
@@ -259,10 +288,12 @@ pub enum PaneMode {
 #[serde(deny_unknown_fields)]
 pub struct LayoutSplit {
     #[doc = "Target process title to place inside this split (or `\"Combined Logs\"`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     #[doc = "Percentage of space within the parent block to allocate (0 to 100)."]
     pub size_percentage: u16,
     #[doc = "If true, automatically places all unassigned process panes inside this split."]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub unassigned: Option<bool>,
 }
 
@@ -282,7 +313,7 @@ pub enum LayoutEdge {
 }
 
 #[doc = "Configuration for creating a Docker bridge network."]
-#[derive(Debug, Deserialize, Clone, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(untagged)]
 #[serde(deny_unknown_fields)]
 pub enum DockerNetworkConfig {
@@ -293,6 +324,7 @@ pub enum DockerNetworkConfig {
         #[doc = "CIDR subnet string for the bridge network."]
         subnet: String,
         #[doc = "Custom CLI arguments passed to `docker network create`."]
+        #[serde(skip_serializing_if = "Option::is_none")]
         args: Option<Vec<String>>,
     },
 }
@@ -304,6 +336,7 @@ impl DockerNetworkConfig {
             Self::Detailed { subnet, .. } => subnet,
         }
     }
+
     pub fn args(&self) -> Option<&[String]> {
         match self {
             Self::Simple(_) => None,

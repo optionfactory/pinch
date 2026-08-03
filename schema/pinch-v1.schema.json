@@ -547,8 +547,7 @@
           "properties": {
             "bash": {
               "description": "Whether to wrap the command string in `bash -c` (default: `false`).",
-              "type": "boolean",
-              "default": false
+              "type": "boolean"
             },
             "cmd": {
               "description": "The command string to execute.",
@@ -604,8 +603,7 @@
           "properties": {
             "bash": {
               "description": "Whether to wrap the command string in `bash -c` (default: `false`).",
-              "type": "boolean",
-              "default": false
+              "type": "boolean"
             },
             "cmd": {
               "description": "Host command string to execute within the target network namespace.",
