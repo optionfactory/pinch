@@ -90,6 +90,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             cli::ConfigCommand::Init => unreachable!(),
         },
+        cli::CliAction::Audit(cmd) => match cmd {
+            cli::AuditCommand::Show { format } => {
+                cli::show_audit(&raw_config, &parsed.vars, format)?;
+                return Ok(());
+            }
+        },
         cli::CliAction::Process(cmd) => match cmd {
             cli::ProcessCommand::Ls => {
                 println!("Available process titles in '{}':", config_path);
@@ -132,7 +138,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         },
-        cli::CliAction::Net(cmd) => match cmd {
+        cli::CliAction::Networks(cmd) => match cmd {
             cli::NetCommand::Ls => {
                 println!("Available Docker networks in '{}':", config_path);
                 cli::list_networks(&raw_config);
@@ -152,8 +158,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
         },
-        cli::CliAction::Image(cmd) => match cmd {
-            cli::ImageCommand::Ls { format } => {
+        cli::CliAction::Containers(cmd) => match cmd {
+            cli::ContainerCommand::Ls { format } => {
                 cli::list_images(&raw_config, &parsed.vars, format)?;
                 return Ok(());
             }

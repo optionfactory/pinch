@@ -41,19 +41,19 @@ pub enum Commands {
     #[command(about = "Start the TUI supervisor (default action)")]
     Tui,
     #[command(about = "Manage and interact with supervised processes")]
-    Process {
+    Processes {
         #[command(subcommand)]
-        command: ProcessSubcommand,
+        command: ProcessesSubcommand,
     },
     #[command(about = "Manage Docker networks")]
-    Net {
+    Networks {
         #[command(subcommand)]
-        command: NetSubcommand,
+        command: NetworksSubcommand,
     },
-    #[command(about = "Inspect Docker images referenced in the configuration")]
-    Image {
+    #[command(about = "Inspect containers referenced in the configuration")]
+    Containers {
         #[command(subcommand)]
-        command: ImageSubcommand,
+        command: ContainerSubcommand,
     },
     #[command(about = "Inspect project metadata")]
     Project {
@@ -65,6 +65,16 @@ pub enum Commands {
         #[command(subcommand)]
         command: ConfigSubcommand,
     },
+    #[command(about = "Audit project metadata")]
+    Audit {
+        #[arg(
+            short = 'f',
+            long = "format",
+            help = "Output format (defaults to 'json')",
+            value_enum
+        )]
+        format: Option<OutputFormat>,
+    },
     #[command(about = "Generate shell completion scripts")]
     Completion {
         #[arg(help = "Shell to generate completions for", value_enum)]
@@ -73,7 +83,7 @@ pub enum Commands {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum ProcessSubcommand {
+pub enum ProcessesSubcommand {
     #[command(about = "Run a process directly in the foreground or background")]
     Run {
         #[arg(help = "Process title to execute")]
@@ -98,7 +108,7 @@ pub enum ProcessSubcommand {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum NetSubcommand {
+pub enum NetworksSubcommand {
     #[command(about = "List all Docker networks defined in the configuration")]
     Ls,
     #[command(about = "Show the docker network create command for a specific network (or all if omitted)")]
@@ -121,8 +131,8 @@ pub enum NetSubcommand {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum ImageSubcommand {
-    #[command(about = "List all unique Docker images used by processes in the configuration")]
+pub enum ContainerSubcommand {
+    #[command(about = "List all unique container images used by processes in the configuration")]
     Ls {
         #[arg(short = 'f', long = "format", help = "Output format (defaults to 'raw')", value_enum)]
         format: Option<OutputFormat>,
@@ -176,6 +186,11 @@ pub enum ConfigSubcommand {
     },
 }
 
+#[derive(Debug)]
+pub enum AuditCommand {
+    Show { format: Option<OutputFormat> },
+}
+
 #[derive(ValueEnum, Clone, Debug)]
 pub enum Shell {
     Bash,
@@ -215,7 +230,7 @@ pub enum NetCommand {
 }
 
 #[derive(Debug)]
-pub enum ImageCommand {
+pub enum ContainerCommand {
     Ls { format: Option<OutputFormat> },
 }
 
@@ -235,10 +250,11 @@ pub enum ConfigCommand {
 pub enum CliAction {
     Tui,
     Process(ProcessCommand),
-    Net(NetCommand),
-    Image(ImageCommand),
+    Networks(NetCommand),
+    Containers(ContainerCommand),
     Project(ProjectCommand),
     Config(ConfigCommand),
+    Audit(AuditCommand),
     Completion(Shell),
 }
 
@@ -252,30 +268,35 @@ pub struct ParsedCli {
 pub fn parse_args() -> ParsedCli {
     let cli = Cli::parse();
     let config_file = cli.config_file;
+    let config_file = if config_file == "-" {
+        "/dev/stdin".to_string()
+    } else {
+        config_file
+    };
     let vars: HashMap<String, String> = cli.overrides.into_iter().collect();
     let action = match cli.command {
         Some(Commands::Tui) | None => CliAction::Tui,
-        Some(Commands::Process { command }) => {
+        Some(Commands::Processes { command }) => {
             let cmd = match command {
-                ProcessSubcommand::Ls => ProcessCommand::Ls,
-                ProcessSubcommand::Show { title, format } => ProcessCommand::Show { title, format },
-                ProcessSubcommand::Run { title, background } => ProcessCommand::Run { title, background },
+                ProcessesSubcommand::Ls => ProcessCommand::Ls,
+                ProcessesSubcommand::Show { title, format } => ProcessCommand::Show { title, format },
+                ProcessesSubcommand::Run { title, background } => ProcessCommand::Run { title, background },
             };
             CliAction::Process(cmd)
         }
-        Some(Commands::Net { command }) => {
+        Some(Commands::Networks { command }) => {
             let cmd = match command {
-                NetSubcommand::Ls => NetCommand::Ls,
-                NetSubcommand::Show { name, format } => NetCommand::Show { name, format },
-                NetSubcommand::Create { name } => NetCommand::Create { name },
+                NetworksSubcommand::Ls => NetCommand::Ls,
+                NetworksSubcommand::Show { name, format } => NetCommand::Show { name, format },
+                NetworksSubcommand::Create { name } => NetCommand::Create { name },
             };
-            CliAction::Net(cmd)
+            CliAction::Networks(cmd)
         }
-        Some(Commands::Image { command }) => {
+        Some(Commands::Containers { command }) => {
             let cmd = match command {
-                ImageSubcommand::Ls { format } => ImageCommand::Ls { format },
+                ContainerSubcommand::Ls { format } => ContainerCommand::Ls { format },
             };
-            CliAction::Image(cmd)
+            CliAction::Containers(cmd)
         }
         Some(Commands::Project { command }) => {
             let cmd = match command {
@@ -291,6 +312,7 @@ pub fn parse_args() -> ParsedCli {
             };
             CliAction::Config(cmd)
         }
+        Some(Commands::Audit { format }) => CliAction::Audit(AuditCommand::Show { format }),
         Some(Commands::Completion { shell }) => CliAction::Completion(shell),
     };
     ParsedCli {
