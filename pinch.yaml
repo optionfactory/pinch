@@ -1,19 +1,15 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
 project:
-  name: "Refactored Dashboard"
-
+  name: "Project Dashboard"
 docker_networks:
   hi: "172.18.23.0/24"
-
 vars:
   target: "8.8.8.8"
   flags: "-c 10"
-
 processes:
   # 1. Shorthand string execution (defaults to type: "process", bash: false, mode: "log")
   - title: "Simple Ping"
     run: "ping {{ target }} {{ flags }}"
-
   # 2. Local Process with TUI display mode
   - title: "System Monitor"
     mode: "tui"
@@ -21,7 +17,6 @@ processes:
       type: "process"
       bash: false
       cmd: "top"
-
   # 3. Docker container execution
   - title: "Nginx Test"
     run:
@@ -32,7 +27,6 @@ processes:
         --network hi
         --ip 172.18.23.10
       args: "nginx -g 'daemon off;'"
-
   # 4. Namespace intrusion execution (defaults to the 'hi' network automatically)
   - title: "Google DNS (Namespace)"
     link: "https://www.google.com"

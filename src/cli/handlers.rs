@@ -24,6 +24,25 @@ pub fn show_vars(
     Ok(())
 }
 
+pub fn show_project(manifest: &PinchManifest, format: Option<OutputFormat>) -> Result<(), String> {
+    let project = &manifest.project;
+    match format.unwrap_or(OutputFormat::Yaml) {
+        OutputFormat::Yaml => {
+            let yaml_str = serde_yaml::to_string(project).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
+            print!("{}", yaml_str);
+        }
+        OutputFormat::Json => {
+            let json_str =
+                serde_json::to_string_pretty(project).map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
+            println!("{}", json_str);
+        }
+        OutputFormat::Raw | OutputFormat::Properties => {
+            println!("{:#?}", project);
+        }
+    }
+    Ok(())
+}
+
 pub fn show_config(
     manifest: &PinchManifest,
     cli_vars: &HashMap<String, String>,

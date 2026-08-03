@@ -55,6 +55,11 @@ pub enum Commands {
         #[command(subcommand)]
         command: ImageSubcommand,
     },
+    #[command(about = "Inspect project metadata")]
+    Project {
+        #[command(subcommand)]
+        command: ProjectSubcommand,
+    },
     #[command(about = "Manage configuration files")]
     Config {
         #[command(subcommand)]
@@ -122,6 +127,25 @@ pub enum ImageSubcommand {
         #[arg(short = 'f', long = "format", help = "Output format (defaults to 'raw')", value_enum)]
         format: Option<OutputFormat>,
     },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum ProjectSubcommand {
+    #[command(about = "Show the project metadata block")]
+    Show {
+        #[arg(
+            short = 'f',
+            long = "format",
+            help = "Output format (defaults to 'yaml')",
+            value_enum
+        )]
+        format: Option<OutputFormat>,
+    },
+}
+
+#[derive(Debug)]
+pub enum ProjectCommand {
+    Show { format: Option<OutputFormat> },
 }
 
 #[derive(Subcommand, Debug)]
@@ -213,6 +237,7 @@ pub enum CliAction {
     Process(ProcessCommand),
     Net(NetCommand),
     Image(ImageCommand),
+    Project(ProjectCommand),
     Config(ConfigCommand),
     Completion(Shell),
 }
@@ -251,6 +276,12 @@ pub fn parse_args() -> ParsedCli {
                 ImageSubcommand::Ls { format } => ImageCommand::Ls { format },
             };
             CliAction::Image(cmd)
+        }
+        Some(Commands::Project { command }) => {
+            let cmd = match command {
+                ProjectSubcommand::Show { format } => ProjectCommand::Show { format },
+            };
+            CliAction::Project(cmd)
         }
         Some(Commands::Config { command }) => {
             let cmd = match command {

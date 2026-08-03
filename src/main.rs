@@ -73,6 +73,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let raw_config: config::PinchManifest =
         serde_yaml::from_reader(reader).map_err(|e| format!("Failed to parse YAML config: {}", e))?;
     match parsed.action {
+        cli::CliAction::Project(cmd) => match cmd {
+            cli::ProjectCommand::Show { format } => {
+                cli::show_project(&raw_config, format)?;
+                return Ok(());
+            }
+        },
         cli::CliAction::Config(cmd) => match cmd {
             cli::ConfigCommand::Show { format } => {
                 cli::show_config(&raw_config, &parsed.vars, format)?;
