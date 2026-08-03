@@ -178,14 +178,16 @@ pub enum AuthType {
     NotApplicable,
 }
 
-#[doc = "Sensitive data classifications handled by the service.\n\n\
-         ### Data Classification Hierarchy\n\
-         * **Public** → **Internal** → **Confidential** → **Restricted**\n\n\
-         ### Regulatory Standards Covered\n\
-         * **GDPR / CCPA / BIPA:** `Pii`, `Spi`, `Biometric`\n\
-         * **PCI-DSS:** `Pci`\n\
-         * **SOX:** `Financial`\n\
-         * **HIPAA:** `Phi`"]
+#[doc = "Sensitive data classifications handled by the service."]
+#[doc = ""]
+#[doc = "### Data Classification Hierarchy"]
+#[doc = "* **Public** → **Internal** → **Confidential** → **Restricted**"]
+#[doc = ""]
+#[doc = "### Regulatory Standards Covered"]
+#[doc = "* **GDPR / CCPA / BIPA:** `Pii`, `Spi`, `Biometric`"]
+#[doc = "* **PCI-DSS:** `Pci`"]
+#[doc = "* **SOX:** `Financial`"]
+#[doc = "* **HIPAA:** `Phi`"]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
@@ -226,10 +228,83 @@ pub struct ComplianceManifest {
     #[schemars(with = "CraClass")]
     pub cra: Option<CraClass>,
 
+    #[doc = "EU NIS2 Directive criticality classification (for non-financial critical infrastructure)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Nis2Category")]
+    pub nis2: Option<Nis2Category>,
+
+    #[doc = "EU AI Act risk classification tier."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "AiActClass")]
+    pub ai_act: Option<AiActClass>,
+
+    #[doc = "GDPR data protection role and data residency boundaries."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "GdprManifest")]
+    pub gdpr: Option<GdprManifest>,
+
     #[doc = "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block."]
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AdsManifest")]
     pub ads: Option<AdsManifest>,
+}
+
+#[doc = "EU NIS2 Directive classification tier for cybersecurity resilience."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum Nis2Category {
+    #[doc = "Essential Entity (Soggetti Essenziali): Energy, transport, banking, health, digital infrastructure."]
+    EssentialEntity,
+    #[doc = "Important Entity (Soggetti Importanti): Postal, waste, chemicals, food, digital providers (SaaS/marketplaces)."]
+    ImportantEntity,
+    #[doc = "Not in scope of NIS2 requirements."]
+    OutOfScope,
+}
+
+#[doc = "EU AI Act risk classification tier."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum AiActClass {
+    #[doc = "High-Risk AI System (biometrics, critical infrastructure, employment, credit scoring)."]
+    HighRisk,
+    #[doc = "General Purpose AI (GPAI) model or foundation model integration."]
+    GeneralPurposeAi,
+    #[doc = "Limited Risk AI System (requires transparency disclosures, e.g., chatbots/AI assistants)."]
+    LimitedRisk,
+    #[doc = "Minimal or no risk AI system."]
+    MinimalRisk,
+    #[doc = "Not an AI system; EU AI Act not applicable."]
+    NotApplicable,
+}
+
+#[doc = "General Data Protection Regulation (GDPR) architectural specification."]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GdprManifest {
+    #[doc = "Our organization's legal role regarding personal data in this project."]
+    pub role: GdprRole,
+
+    #[doc = "Whether personal data is processed or stored strictly within the EU/EEA."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
+    pub eu_residency_only: Option<bool>,
+}
+
+#[doc = "Legal processing role under GDPR (Art. 4)."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum GdprRole {
+    #[doc = "Data Controller (Titolare del trattamento) - determines purposes and means of processing."]
+    Controller,
+    #[doc = "Data Processor (Responsabile del trattamento) - processes data on behalf of a Controller."]
+    Processor,
+    #[doc = "Sub-processor (Sub-responsabile) - third-party processor engaged by a Processor."]
+    SubProcessor,
+    #[doc = "No personal data processed."]
+    None,
 }
 
 #[doc = "DORA (Digital Operational Resilience Act) operational criticality tag."]
@@ -581,10 +656,10 @@ pub struct LayoutBlock {
     #[doc = "Percentage of currently available space to allocate (0 to 100)."]
     pub size_percentage: u16,
 
-    #[doc = "Split orientation for sub-panes (`horizontal` or `vertical`)."]
+    #[doc = "Split orientation for sub-panes inside an edge-carved block."]
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "String")]
-    pub direction: Option<String>,
+    #[schemars(with = "LayoutDirection")]
+    pub direction: Option<LayoutDirection>,
 
     #[doc = "Sub-panes to arrange within this carved edge block."]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -610,6 +685,15 @@ pub enum LayoutEdge {
     Left,
     #[doc = "Carve from the right edge."]
     Right,
+}
+
+#[doc = "Split orientation for sub-panes (`horizontal` or `vertical`)."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum LayoutDirection {
+    Horizontal,
+    Vertical,
 }
 
 #[doc = "A sub-pane division within an edge-carved layout block."]

@@ -1,4 +1,4 @@
-use crate::config::{LayoutBlock, LayoutEdge};
+use crate::config::{LayoutBlock, LayoutDirection, LayoutEdge};
 use crate::process::panes::ProcessPane;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 
@@ -88,9 +88,9 @@ pub fn compute_pane_geometries(
         };
 
         if let Some(ref sub_splits) = item.splits {
-            let split_direction = match item.direction.as_deref() {
-                Some("horizontal") => Direction::Horizontal,
-                Some("vertical") => Direction::Vertical,
+            let split_direction = match item.direction {
+                Some(LayoutDirection::Horizontal) => Direction::Horizontal,
+                Some(LayoutDirection::Vertical) => Direction::Vertical,
                 _ => match item.edge {
                     LayoutEdge::Left | LayoutEdge::Right => Direction::Vertical,
                     LayoutEdge::Top | LayoutEdge::Bottom => Direction::Horizontal,

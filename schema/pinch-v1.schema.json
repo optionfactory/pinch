@@ -167,6 +167,36 @@
         }
       ]
     },
+    "AiActClass": {
+      "description": "EU AI Act risk classification tier.",
+      "oneOf": [
+        {
+          "description": "High-Risk AI System (biometrics, critical infrastructure, employment, credit scoring).",
+          "type": "string",
+          "const": "high-risk"
+        },
+        {
+          "description": "General Purpose AI (GPAI) model or foundation model integration.",
+          "type": "string",
+          "const": "general-purpose-ai"
+        },
+        {
+          "description": "Limited Risk AI System (requires transparency disclosures, e.g., chatbots/AI assistants).",
+          "type": "string",
+          "const": "limited-risk"
+        },
+        {
+          "description": "Minimal or no risk AI system.",
+          "type": "string",
+          "const": "minimal-risk"
+        },
+        {
+          "description": "Not an AI system; EU AI Act not applicable.",
+          "type": "string",
+          "const": "not-applicable"
+        }
+      ]
+    },
     "AuthType": {
       "description": "Primary authentication mechanism for ingress requests.",
       "oneOf": [
@@ -250,6 +280,10 @@
           "description": "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block.",
           "$ref": "#/$defs/AdsManifest"
         },
+        "ai_act": {
+          "description": "EU AI Act risk classification tier.",
+          "$ref": "#/$defs/AiActClass"
+        },
         "cra": {
           "description": "EU Cyber Resilience Act (CRA) product classification tier.",
           "$ref": "#/$defs/CraClass"
@@ -257,12 +291,23 @@
         "dora": {
           "description": "DORA (Digital Operational Resilience Act) criticality tag.",
           "$ref": "#/$defs/DoraCriticality"
+        },
+        "gdpr": {
+          "description": "GDPR data protection role and data residency boundaries.",
+          "$ref": "#/$defs/GdprManifest"
+        },
+        "nis2": {
+          "description": "EU NIS2 Directive criticality classification (for non-financial critical infrastructure).",
+          "$ref": "#/$defs/Nis2Category"
         }
       },
       "additionalProperties": false,
       "required": [
         "dora",
         "cra",
+        "nis2",
+        "ai_act",
+        "gdpr",
         "ads"
       ]
     },
@@ -404,13 +449,57 @@
         }
       ]
     },
+    "GdprManifest": {
+      "description": "General Data Protection Regulation (GDPR) architectural specification.",
+      "type": "object",
+      "properties": {
+        "eu_residency_only": {
+          "description": "Whether personal data is processed or stored strictly within the EU/EEA.",
+          "type": "boolean"
+        },
+        "role": {
+          "description": "Our organization's legal role regarding personal data in this project.",
+          "$ref": "#/$defs/GdprRole"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "eu_residency_only"
+      ]
+    },
+    "GdprRole": {
+      "description": "Legal processing role under GDPR (Art. 4).",
+      "oneOf": [
+        {
+          "description": "Data Controller (Titolare del trattamento) - determines purposes and means of processing.",
+          "type": "string",
+          "const": "controller"
+        },
+        {
+          "description": "Data Processor (Responsabile del trattamento) - processes data on behalf of a Controller.",
+          "type": "string",
+          "const": "processor"
+        },
+        {
+          "description": "Sub-processor (Sub-responsabile) - third-party processor engaged by a Processor.",
+          "type": "string",
+          "const": "sub-processor"
+        },
+        {
+          "description": "No personal data processed.",
+          "type": "string",
+          "const": "none"
+        }
+      ]
+    },
     "LayoutBlock": {
       "description": "A progressive edge-carving block ruleset for arranging terminal panes.",
       "type": "object",
       "properties": {
         "direction": {
-          "description": "Split orientation for sub-panes (`horizontal` or `vertical`).",
-          "type": "string"
+          "description": "Split orientation for sub-panes inside an edge-carved block.",
+          "$ref": "#/$defs/LayoutDirection"
         },
         "edge": {
           "description": "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`).",
@@ -447,6 +536,14 @@
         "direction",
         "splits",
         "unassigned"
+      ]
+    },
+    "LayoutDirection": {
+      "description": "Split orientation for sub-panes (`horizontal` or `vertical`).",
+      "type": "string",
+      "enum": [
+        "horizontal",
+        "vertical"
       ]
     },
     "LayoutEdge": {
@@ -523,6 +620,26 @@
           "description": "Experimental proof-of-concept; no production SLA.",
           "type": "string",
           "const": "prototype"
+        }
+      ]
+    },
+    "Nis2Category": {
+      "description": "EU NIS2 Directive classification tier for cybersecurity resilience.",
+      "oneOf": [
+        {
+          "description": "Essential Entity (Soggetti Essenziali): Energy, transport, banking, health, digital infrastructure.",
+          "type": "string",
+          "const": "essential-entity"
+        },
+        {
+          "description": "Important Entity (Soggetti Importanti): Postal, waste, chemicals, food, digital providers (SaaS/marketplaces).",
+          "type": "string",
+          "const": "important-entity"
+        },
+        {
+          "description": "Not in scope of NIS2 requirements.",
+          "type": "string",
+          "const": "out-of-scope"
         }
       ]
     },
