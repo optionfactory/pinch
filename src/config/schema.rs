@@ -74,9 +74,14 @@ pub struct ProjectManifest {
     #[schemars(with = "LifecycleType")]
     pub lifecycle: Option<LifecycleType>,
 
+    #[doc = "Operational service tier dictating on-call priority and internal incident response targets."]
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "AuthType")]
-    pub authentication: Option<AuthType>,
+    #[schemars(with = "ServiceTier")]
+    pub tier: Option<ServiceTier>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<AuthType>")]
+    pub authentication: Option<Vec<AuthType>>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<Sensitivity>")]
@@ -123,6 +128,90 @@ pub enum LifecycleType {
     Prototype,
 }
 
+#[doc = "Operational service tier dictating on-call priority and internal incident response targets."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum ServiceTier {
+    #[doc = "Tier 1: Critical production path (24/7 on-call, immediate response SLO)."]
+    Tier1,
+    #[doc = "Tier 2: Core supporting functionality (business hours support, rapid degradation fallback)."]
+    Tier2,
+    #[doc = "Tier 3: Internal developer tools, async batch jobs, or non-critical support utilities."]
+    Tier3,
+    #[doc = "Tier 4: Experimental prototypes, sandbox playgrounds, or best-effort utilities."]
+    Tier4,
+}
+
+#[doc = "Primary authentication mechanism for ingress requests."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum AuthType {
+    #[doc = "Identity provider abstraction."]
+    Idp,
+    #[doc = "OpenID Connect (OIDC) identity authentication layer."]
+    Oidc,
+    #[doc = "Generic OAuth 2.0 framework."]
+    Oauth2,
+    #[doc = "Generic SAML 2.0 Web SSO."]
+    Saml,
+    #[doc = "API Key header or query parameter validation."]
+    ApiKey,
+    #[doc = "Stateless JSON Web Token (JWT) signature validation."]
+    Jwt,
+    #[doc = "Mutual TLS client certificate authentication."]
+    Mtls,
+    #[doc = "HMAC request signature validation (e.g., webhooks)."]
+    Hmac,
+    #[doc = "Stateful cookie or HTTP session authentication."]
+    Session,
+    #[doc = "Custom bearer token or generic token authentication."]
+    Token,
+    #[doc = "HTTP Basic authentication (legacy/internal)."]
+    Basic,
+    #[doc = "Custom HTML form authentication."]
+    Form,
+    #[doc = "Explicitly public endpoint accepting unauthenticated requests (e.g., public API or landing page)."]
+    Unauthenticated,
+    #[doc = "Authentication is not applicable (e.g., offline CLI utility, library, or background job)."]
+    NotApplicable,
+}
+
+#[doc = "Sensitive data classifications handled by the service.\n\n\
+         ### Data Classification Hierarchy\n\
+         * **Public** → **Internal** → **Confidential** → **Restricted**\n\n\
+         ### Regulatory Standards Covered\n\
+         * **GDPR / CCPA / BIPA:** `Pii`, `Spi`, `Biometric`\n\
+         * **PCI-DSS:** `Pci`\n\
+         * **SOX:** `Financial`\n\
+         * **HIPAA:** `Phi`"]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum Sensitivity {
+    #[doc = "Non-sensitive data safe for public distribution."]
+    Public,
+    #[doc = "Standard internal business data."]
+    Internal,
+    #[doc = "Restricted company intellectual property or business trade secrets."]
+    Confidential,
+    #[doc = "Maximum security assets requiring strict isolation (e.g., root credentials, master keys)."]
+    Restricted,
+    #[doc = "Personally Identifiable Information (names, emails, addresses)."]
+    Pii,
+    #[doc = "Sensitive PII / Special Category Data (genetics, political/religious beliefs under GDPR Art. 9)."]
+    Spi,
+    #[doc = "Biometric identification data (fingerprints, facial recognition, voice signatures)."]
+    Biometric,
+    #[doc = "Payment Card Industry data (credit cards, billing details, PANs)."]
+    Pci,
+    #[doc = "Non-PCI financial records (SOX audit trails, payroll, company accounting, bank accounts)."]
+    Financial,
+    #[doc = "Protected Health Information (medical records, insurance claims, health data)."]
+    Phi,
+}
+
 #[doc = "Regulatory compliance and cybersecurity resilience specifications."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -141,6 +230,36 @@ pub struct ComplianceManifest {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AdsManifest")]
     pub ads: Option<AdsManifest>,
+}
+
+#[doc = "DORA (Digital Operational Resilience Act) operational criticality tag."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum DoraCriticality {
+    #[doc = "Supports a Critical or Important Function (CIF) subject to strict RTO/RPO SLAs."]
+    CifSupported,
+
+    #[doc = "Non-critical ICT supporting service or internal developer utility."]
+    NonCritical,
+}
+
+#[doc = "EU Cyber Resilience Act (CRA) product classification tier for cybersecurity compliance."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum CraClass {
+    #[doc = "Default category: Standard software product with digital elements."]
+    Default,
+
+    #[doc = "Important Class I: Identity management, password managers, VPNs, network monitors."]
+    ImportantClass1,
+
+    #[doc = "Important Class II: Hypervisors, container runtimes, firewalls, IDS/IPS."]
+    ImportantClass2,
+
+    #[doc = "Critical: Smartcards, hardware security modules, and core cryptographic hardware/software."]
+    Critical,
 }
 
 #[doc = "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance specification."]
@@ -205,101 +324,82 @@ pub enum AdsLoggingStatus {
     Disabled,
 }
 
-#[doc = "DORA (Digital Operational Resilience Act) operational criticality tag."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[doc = "Supported deployment environment types."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
-pub enum DoraCriticality {
-    #[doc = "Supports a Critical or Important Function (CIF) subject to strict RTO/RPO SLAs."]
-    CifSupported,
-
-    #[doc = "Non-critical ICT supporting service or internal developer utility."]
-    NonCritical,
+pub enum EnvironmentType {
+    #[doc = "Local developer workstation or local machine loopback."]
+    Local,
+    #[doc = "Shared cloud or hosted development environment."]
+    Development,
+    #[doc = "Short-lived, dynamic per-PR or per-branch preview environment."]
+    Preview,
+    #[doc = "Automated CI/CD integration and unit testing environment."]
+    Testing,
+    #[doc = "Dedicated Quality Assurance and manual regression environment."]
+    Qa,
+    #[doc = "User Acceptance Testing environment for business stakeholder validation."]
+    Uat,
+    #[doc = "Isolated sandbox playground for external integrations and experimentation."]
+    Sandbox,
+    #[doc = "Near-exact production replica environment running parallel cutover validation (ambiente di parallelo)."]
+    PreProduction,
+    #[doc = "Pre-production mirror environment for final release candidate acceptance."]
+    Staging,
+    #[doc = "Sales demo, customer sandbox, or product preview environment."]
+    Demo,
+    #[doc = "Dedicated load testing and performance benchmarking environment."]
+    Performance,
+    #[doc = "Dark-launch or traffic-mirrored environment receiving real-time production traffic passively."]
+    Shadow,
+    #[doc = "Live customer-facing production environment."]
+    Production,
+    #[doc = "Disaster recovery, warm standby, or secondary failover region."]
+    DisasterRecovery,
 }
 
-#[doc = "EU Cyber Resilience Act (CRA) product classification tier for cybersecurity compliance."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
+#[doc = "Environment-specific deployment configuration."]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub enum CraClass {
-    #[doc = "Default category: Standard software product with digital elements."]
-    Default,
+pub struct EnvironmentConfig {
+    #[doc = "Network ingress reachability for this specific environment."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "ExposureType")]
+    pub exposure: Option<ExposureType>,
 
-    #[doc = "Important Class I: Identity management, password managers, VPNs, network monitors."]
-    ImportantClass1,
-
-    #[doc = "Important Class II: Hypervisors, container runtimes, firewalls, IDS/IPS."]
-    ImportantClass2,
-
-    #[doc = "Critical: Smartcards, hardware security modules, and core cryptographic hardware/software."]
-    Critical,
+    #[doc = "Map of domain names to their management origin (managed vs external)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "BTreeMap<String, DomainManagement>")]
+    pub domains: Option<BTreeMap<String, DomainManagement>>,
 }
 
-#[doc = "Sensitive data classifications handled by the service.\n\n\
-         ### Data Classification Hierarchy\n\
-         * **Public** → **Internal** → **Confidential** → **Restricted**\n\n\
-         ### Regulatory Standards Covered\n\
-         * **GDPR / CCPA / BIPA:** `Pii`, `Spi`, `Biometric`\n\
-         * **PCI-DSS:** `Pci`\n\
-         * **SOX:** `Financial`\n\
-         * **HIPAA:** `Phi`"]
+#[doc = "Network ingress reachability for the project."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
-pub enum Sensitivity {
-    #[doc = "Non-sensitive data safe for public distribution."]
-    Public,
-    #[doc = "Standard internal business data."]
-    Internal,
-    #[doc = "Restricted company intellectual property or business trade secrets."]
-    Confidential,
-    #[doc = "Maximum security assets requiring strict isolation (e.g., root credentials, master keys)."]
-    Restricted,
-    #[doc = "Personally Identifiable Information (names, emails, addresses)."]
-    Pii,
-    #[doc = "Sensitive PII / Special Category Data (genetics, political/religious beliefs under GDPR Art. 9)."]
-    Spi,
-    #[doc = "Biometric identification data (fingerprints, facial recognition, voice signatures)."]
-    Biometric,
-    #[doc = "Payment Card Industry data (credit cards, billing details, PANs)."]
-    Pci,
-    #[doc = "Non-PCI financial records (SOX audit trails, payroll, company accounting, bank accounts)."]
-    Financial,
-    #[doc = "Protected Health Information (medical records, insurance claims, health data)."]
-    Phi,
-}
-
-#[doc = "Primary authentication mechanism for ingress requests."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-#[serde(deny_unknown_fields)]
-pub enum AuthType {
-    #[doc = "Identity provider abstraction."]
-    Idp,
-    #[doc = "OpenID Connect (OIDC) identity authentication layer."]
-    Oidc,
-    #[doc = "Generic OAuth 2.0 framework."]
-    Oauth2,
-    #[doc = "Generic SAML 2.0 Web SSO."]
-    Saml,
-    #[doc = "API Key header or query parameter validation."]
-    ApiKey,
-    #[doc = "Stateless JSON Web Token (JWT) signature validation."]
-    Jwt,
-    #[doc = "Mutual TLS client certificate authentication."]
-    Mtls,
-    #[doc = "HMAC request signature validation (e.g., webhooks)."]
-    Hmac,
-    #[doc = "Stateful cookie or HTTP session authentication."]
-    Session,
-    #[doc = "Custom bearer token or generic token authentication."]
-    Token,
-    #[doc = "HTTP Basic authentication (legacy/internal)."]
-    Basic,
-    #[doc = "Custom HTML form authentication."]
-    Form,
-    #[doc = "Unprotected public endpoint (no authentication required)."]
+pub enum ExposureType {
+    #[doc = "Reachable only on localhost or local machine process loopback."]
+    Local,
+    #[doc = "Reachable only inside the private corporate VPN, VPC, or internal service mesh."]
+    RestrictedVpn,
+    #[doc = "Reachable from the internet but restricted by IP allowlisting or CIDR controls."]
+    RestrictedIp,
+    #[doc = "Publicly reachable from the internet."]
+    Internet,
+    #[doc = "No incoming network traffic (e.g., background worker or CLI tool)."]
     None,
+}
+
+#[doc = "Domain management and ownership origin."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum DomainManagement {
+    #[doc = "Managed directly by our infrastructure / DNS / CDN rules."]
+    Managed,
+    #[doc = "Managed externally by a client, partner, or third party."]
+    External,
 }
 
 #[doc = "Configuration for an individual supervised process or container."]
@@ -364,84 +464,6 @@ pub enum RunManifest {
     Detailed(RunKind),
 }
 
-#[doc = "Supported deployment environment types."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-#[serde(deny_unknown_fields)]
-pub enum EnvironmentType {
-    #[doc = "Local developer workstation or local machine loopback."]
-    Local,
-    #[doc = "Shared cloud or hosted development environment."]
-    Development,
-    #[doc = "Short-lived, dynamic per-PR or per-branch preview environment."]
-    Preview,
-    #[doc = "Automated CI/CD integration and unit testing environment."]
-    Testing,
-    #[doc = "Dedicated Quality Assurance and manual regression environment."]
-    Qa,
-    #[doc = "User Acceptance Testing environment for business stakeholder validation."]
-    Uat,
-    #[doc = "Isolated sandbox playground for external integrations and experimentation."]
-    Sandbox,
-    #[doc = "Near-exact production replica environment running parallel cutover validation (ambiente di parallelo)."]
-    PreProduction,
-    #[doc = "Pre-production mirror environment for final release candidate acceptance."]
-    Staging,
-    #[doc = "Sales demo, customer sandbox, or product preview environment."]
-    Demo,
-    #[doc = "Dedicated load testing and performance benchmarking environment."]
-    Performance,
-    #[doc = "Dark-launch or traffic-mirrored environment receiving real-time production traffic passively."]
-    Shadow,
-    #[doc = "Live customer-facing production environment."]
-    Production,
-    #[doc = "Disaster recovery, warm standby, or secondary failover region."]
-    DisasterRecovery,
-}
-
-#[doc = "Environment-specific deployment configuration."]
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct EnvironmentConfig {
-    #[doc = "Network ingress reachability for this specific environment."]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "ExposureType")]
-    pub exposure: Option<ExposureType>,
-
-    #[doc = "Map of domain names to their management origin (managed vs external)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "BTreeMap<String, DomainManagement>")]
-    pub domains: Option<BTreeMap<String, DomainManagement>>,
-}
-
-#[doc = "Domain management and ownership origin."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-#[serde(deny_unknown_fields)]
-pub enum DomainManagement {
-    #[doc = "Managed directly by our infrastructure / DNS / CDN rules."]
-    Managed,
-    #[doc = "Managed externally by a client, partner, or third party."]
-    External,
-}
-
-#[doc = "Network ingress reachability for the project."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-#[serde(deny_unknown_fields)]
-pub enum ExposureType {
-    #[doc = "Reachable only on localhost or local machine process loopback."]
-    Local,
-    #[doc = "Reachable only inside the private corporate VPN, VPC, or internal service mesh."]
-    RestrictedVpn,
-    #[doc = "Reachable from the internet but restricted by IP allowlisting or CIDR controls."]
-    RestrictedIp,
-    #[doc = "Publicly reachable from the internet."]
-    Internet,
-    #[doc = "No incoming network traffic (e.g., background worker or CLI tool)."]
-    None,
-}
-
 #[doc = "Explicit runtime environment type for a supervised process."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(tag = "type", rename_all = "kebab-case")]
@@ -499,81 +521,6 @@ pub struct DockerIntrudeRunConfig {
     pub cmd: String,
 }
 
-#[doc = "A progressive edge-carving block ruleset for arranging terminal panes."]
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct LayoutBlock {
-    #[doc = "Target process title to place inside this block (or `\"Combined Logs\"`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "String")]
-    pub title: Option<String>,
-
-    #[doc = "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`)."]
-    pub edge: LayoutEdge,
-
-    #[doc = "Percentage of currently available space to allocate (0 to 100)."]
-    pub size_percentage: u16,
-
-    #[doc = "Split orientation for sub-panes (`horizontal` or `vertical`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "String")]
-    pub direction: Option<String>,
-
-    #[doc = "Sub-panes to arrange within this carved edge block."]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "Vec<LayoutSplit>")]
-    pub splits: Option<Vec<LayoutSplit>>,
-
-    #[doc = "If true, automatically places all unassigned process panes inside this block."]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "bool")]
-    pub unassigned: Option<bool>,
-}
-
-#[doc = "Display rendering mode for a process pane."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-#[serde(deny_unknown_fields)]
-pub enum PaneMode {
-    #[doc = "Standard streaming log tailer with wrap and truncation controls."]
-    Log,
-    #[doc = "Allocates a PTY for interactive terminal applications (`top`, `vim`, `htop`)."]
-    Tui,
-}
-
-#[doc = "A sub-pane division within an edge-carved layout block."]
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct LayoutSplit {
-    #[doc = "Target process title to place inside this split (or `\"Combined Logs\"`)."]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "String")]
-    pub title: Option<String>,
-
-    #[doc = "Percentage of space within the parent block to allocate (0 to 100)."]
-    pub size_percentage: u16,
-
-    #[doc = "If true, automatically places all unassigned process panes inside this split."]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "bool")]
-    pub unassigned: Option<bool>,
-}
-
-#[doc = "Target edge of the terminal space to carve from."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-#[serde(deny_unknown_fields)]
-pub enum LayoutEdge {
-    #[doc = "Carve from the top edge."]
-    Top,
-    #[doc = "Carve from the bottom edge."]
-    Bottom,
-    #[doc = "Carve from the left edge."]
-    Left,
-    #[doc = "Carve from the right edge."]
-    Right,
-}
-
 #[doc = "Configuration for creating a Docker bridge network."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(untagged)]
@@ -606,6 +553,81 @@ impl DockerNetworkConfig {
             Self::Detailed { args, .. } => args.as_deref(),
         }
     }
+}
+
+#[doc = "Display rendering mode for a process pane."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum PaneMode {
+    #[doc = "Standard streaming log tailer with wrap and truncation controls."]
+    Log,
+    #[doc = "Allocates a PTY for interactive terminal applications (`top`, `vim`, `htop`)."]
+    Tui,
+}
+
+#[doc = "A progressive edge-carving block ruleset for arranging terminal panes."]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct LayoutBlock {
+    #[doc = "Target process title to place inside this block (or `\"Combined Logs\"`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
+    pub title: Option<String>,
+
+    #[doc = "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`)."]
+    pub edge: LayoutEdge,
+
+    #[doc = "Percentage of currently available space to allocate (0 to 100)."]
+    pub size_percentage: u16,
+
+    #[doc = "Split orientation for sub-panes (`horizontal` or `vertical`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
+    pub direction: Option<String>,
+
+    #[doc = "Sub-panes to arrange within this carved edge block."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<LayoutSplit>")]
+    pub splits: Option<Vec<LayoutSplit>>,
+
+    #[doc = "If true, automatically places all unassigned process panes inside this block."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
+    pub unassigned: Option<bool>,
+}
+
+#[doc = "Target edge of the terminal space to carve from."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum LayoutEdge {
+    #[doc = "Carve from the top edge."]
+    Top,
+    #[doc = "Carve from the bottom edge."]
+    Bottom,
+    #[doc = "Carve from the left edge."]
+    Left,
+    #[doc = "Carve from the right edge."]
+    Right,
+}
+
+#[doc = "A sub-pane division within an edge-carved layout block."]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct LayoutSplit {
+    #[doc = "Target process title to place inside this split (or `\"Combined Logs\"`)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
+    pub title: Option<String>,
+
+    #[doc = "Percentage of space within the parent block to allocate (0 to 100)."]
+    pub size_percentage: u16,
+
+    #[doc = "If true, automatically places all unassigned process panes inside this split."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
+    pub unassigned: Option<bool>,
 }
 
 fn environments_schema(generator: &mut SchemaGenerator) -> Schema {

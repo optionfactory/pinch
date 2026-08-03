@@ -13,7 +13,6 @@ pub fn format_command_args(args: Vec<String>) -> String {
         .join(" ")
 }
 
-
 pub fn render_single<T: Serialize + std::fmt::Display>(value: &T, format: Option<OutputFormat>) -> Result<(), String> {
     match format.unwrap_or(OutputFormat::Raw) {
         OutputFormat::Raw | OutputFormat::Properties => println!("{}", value),
@@ -79,7 +78,6 @@ where
     Ok(())
 }
 
-
 pub fn render_object<T: Serialize + Debug>(
     value: &T,
     format: Option<OutputFormat>,
@@ -88,13 +86,12 @@ pub fn render_object<T: Serialize + Debug>(
     let fmt = format.unwrap_or(default_format);
     match fmt {
         OutputFormat::Yaml => {
-            let yaml_str = serde_yaml::to_string(value)
-                .map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
+            let yaml_str = serde_yaml::to_string(value).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
             print!("{}", yaml_str);
         }
         OutputFormat::Json => {
-            let json_str = serde_json::to_string_pretty(value)
-                .map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
+            let json_str =
+                serde_json::to_string_pretty(value).map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
             println!("{}", json_str);
         }
         OutputFormat::Raw => {
@@ -102,8 +99,8 @@ pub fn render_object<T: Serialize + Debug>(
             println!("{:#?}", value);
         }
         OutputFormat::Properties => {
-            let json_val = serde_json::to_value(value)
-                .map_err(|e| format!("Failed to convert object to Value: {}", e))?;
+            let json_val =
+                serde_json::to_value(value).map_err(|e| format!("Failed to convert object to Value: {}", e))?;
             let mut props = BTreeMap::new();
             flatten_json_value("", &json_val, &mut props);
             for (k, v) in props {

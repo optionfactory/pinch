@@ -231,9 +231,14 @@
           "const": "form"
         },
         {
-          "description": "Unprotected public endpoint (no authentication required).",
+          "description": "Explicitly public endpoint accepting unauthenticated requests (e.g., public API or landing page).",
           "type": "string",
-          "const": "none"
+          "const": "unauthenticated"
+        },
+        {
+          "description": "Authentication is not applicable (e.g., offline CLI utility, library, or background job).",
+          "type": "string",
+          "const": "not-applicable"
         }
       ]
     },
@@ -607,7 +612,10 @@
       "type": "object",
       "properties": {
         "authentication": {
-          "$ref": "#/$defs/AuthType"
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AuthType"
+          }
         },
         "compliance": {
           "description": "Regulatory compliance and resilience framework mappings.",
@@ -744,6 +752,10 @@
             "$ref": "#/$defs/Sensitivity"
           }
         },
+        "tier": {
+          "description": "Operational service tier dictating on-call priority and internal incident response targets.",
+          "$ref": "#/$defs/ServiceTier"
+        },
         "type": {
           "$ref": "#/$defs/ProjectType"
         }
@@ -753,6 +765,7 @@
         "name",
         "type",
         "lifecycle",
+        "tier",
         "authentication",
         "sensitivity",
         "compliance",
@@ -939,6 +952,31 @@
           "description": "Protected Health Information (medical records, insurance claims, health data).",
           "type": "string",
           "const": "phi"
+        }
+      ]
+    },
+    "ServiceTier": {
+      "description": "Operational service tier dictating on-call priority and internal incident response targets.",
+      "oneOf": [
+        {
+          "description": "Tier 1: Critical production path (24/7 on-call, immediate response SLO).",
+          "type": "string",
+          "const": "tier1"
+        },
+        {
+          "description": "Tier 2: Core supporting functionality (business hours support, rapid degradation fallback).",
+          "type": "string",
+          "const": "tier2"
+        },
+        {
+          "description": "Tier 3: Internal developer tools, async batch jobs, or non-critical support utilities.",
+          "type": "string",
+          "const": "tier3"
+        },
+        {
+          "description": "Tier 4: Experimental prototypes, sandbox playgrounds, or best-effort utilities.",
+          "type": "string",
+          "const": "tier4"
         }
       ]
     }

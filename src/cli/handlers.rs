@@ -111,7 +111,10 @@ pub fn show_networks(
     Ok(())
 }
 
-fn used_containers(manifest: &PinchManifest, context_vars: &HashMap<String, String>) -> Result<BTreeSet<String>, String> {
+fn used_containers(
+    manifest: &PinchManifest,
+    context_vars: &HashMap<String, String>,
+) -> Result<BTreeSet<String>, String> {
     let mut images = BTreeSet::new();
     if let Some(processes) = &manifest.processes {
         for proc in processes {

@@ -107,12 +107,7 @@ pub enum ProcessesSubcommand {
     },
     #[command(about = "List all available process titles from the configuration")]
     Ls {
-        #[arg(
-            short = 'f',
-            long = "format",
-            help = "Output format (defaults to 'raw')",
-            value_enum
-        )]
+        #[arg(short = 'f', long = "format", help = "Output format (defaults to 'raw')", value_enum)]
         format: Option<OutputFormat>,
     },
 }
@@ -121,12 +116,7 @@ pub enum ProcessesSubcommand {
 pub enum NetworksSubcommand {
     #[command(about = "List all Docker networks defined in the configuration")]
     Ls {
-        #[arg(
-            short = 'f',
-            long = "format",
-            help = "Output format (defaults to 'raw')",
-            value_enum
-        )]
+        #[arg(short = 'f', long = "format", help = "Output format (defaults to 'raw')", value_enum)]
         format: Option<OutputFormat>,
     },
     #[command(about = "Show the docker network create command for a specific network (or all if omitted)")]
