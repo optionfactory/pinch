@@ -63,9 +63,9 @@ pub enum Commands {
         command: ProjectSubcommand,
     },
     #[command(about = "Manage configuration files")]
-    Config {
+    Configuration {
         #[command(subcommand)]
-        command: ConfigSubcommand,
+        command: ConfigurationSubcommand,
     },
     #[command(about = "Audit project metadata")]
     Audit {
@@ -172,7 +172,7 @@ pub enum ProjectSubcommand {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum ConfigSubcommand {
+pub enum ConfigurationSubcommand {
     #[command(about = "Generate a default configuration file in the current directory")]
     Init,
     #[command(about = "Show the parsed and variable-expanded configuration")]
@@ -239,7 +239,7 @@ pub enum ProjectCommand {
 }
 
 #[derive(Debug)]
-pub enum ConfigCommand {
+pub enum ConfigurationCommand {
     Init,
     Show {
         format: Option<OutputFormat>,
@@ -269,7 +269,7 @@ pub enum CliAction {
     Networks(NetCommand),
     Containers(ContainerCommand),
     Project(ProjectCommand),
-    Config(ConfigCommand),
+    Configuration(ConfigurationCommand),
     Audit(AuditCommand),
     Completion(Shell),
 }
@@ -290,11 +290,10 @@ fn parse_key_val(s: &str) -> Result<(String, String), String> {
 pub fn parse_args() -> ParsedCli {
     let cli = Cli::parse();
 
-    let config_file = cli.config_file;
-    let config_file = if config_file == "-" {
+    let config_file = if cli.config_file == "-" {
         "/dev/stdin".to_string()
     } else {
-        config_file
+        cli.config_file
     };
 
     let vars: HashMap<String, String> = cli.overrides.into_iter().collect();
@@ -329,13 +328,13 @@ pub fn parse_args() -> ParsedCli {
             };
             CliAction::Project(cmd)
         }
-        Some(Commands::Config { command }) => {
+        Some(Commands::Configuration { command }) => {
             let cmd = match command {
-                ConfigSubcommand::Init => ConfigCommand::Init,
-                ConfigSubcommand::Show { format } => ConfigCommand::Show { format },
-                ConfigSubcommand::Var { name, format } => ConfigCommand::Var { name, format },
+                ConfigurationSubcommand::Init => ConfigurationCommand::Init,
+                ConfigurationSubcommand::Show { format } => ConfigurationCommand::Show { format },
+                ConfigurationSubcommand::Var { name, format } => ConfigurationCommand::Var { name, format },
             };
-            CliAction::Config(cmd)
+            CliAction::Configuration(cmd)
         }
         Some(Commands::Audit { format }) => CliAction::Audit(AuditCommand::Show { format }),
         Some(Commands::Completion { shell }) => CliAction::Completion(shell),

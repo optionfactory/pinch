@@ -1,10 +1,6 @@
 # Pinch
 
-**Pinch** is a terminal-based task manager and process supervisor. 
-
-It allows you to orchestrate, monitor, and interact with project tasks, background services, and TUI applications from a single terminal window. It handles basic process lifecycle management (start, stop, restart, auto-restart on file changes) and provides a customizable grid and edge-based layout system.
-
----
+**Pinch** is a terminal-based task manager and process supervisor. It allows you to orchestrate, monitor, and interact with project tasks, background services, and TUI applications from a single terminal window. It handles basic process lifecycle management (start, stop, restart, auto-restart on file changes) and provides a customizable grid and edge-based layout system.
 
 ## Installation
 
@@ -14,7 +10,7 @@ Download the latest statically-linked musl executable directly from the GitHub R
 
 ```bash
 curl -sSL \
-  https://github.com/optionfactory/pinch/releases/latest/download/pinch-linux-amd64-musl \
+  [https://github.com/optionfactory/pinch/releases/latest/download/pinch-linux-amd64-musl](https://github.com/optionfactory/pinch/releases/latest/download/pinch-linux-amd64-musl) \
   | sudo tee /usr/local/bin/pinch > /dev/null \
   && sudo chmod +x /usr/local/bin/pinch
 ```
@@ -26,13 +22,11 @@ curl -sSL \
 Ensure you have the Rust toolchain installed, then clone the repository and build:
 
 ```bash
-git clone https://github.com/optionfactory/pinch
+git clone [https://github.com/optionfactory/pinch](https://github.com/optionfactory/pinch)
 cd pinch
 make build-release
 sudo make install
 ```
-
----
 
 ## Usage Overview
 
@@ -47,7 +41,7 @@ pinch [OPTIONS] <COMMAND>
 | Flag | Argument | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `-c, --config` | `<FILE>` | `pinch.yaml` | Path to the configuration file (`PINCH_CONFIG` env var supported). |
-| `-v, --var` | `<KEY:VAL>` | *None* | Set or override a configuration variable (repeatable). |
+| `-o, --override` | `<KEY:VAL>` | *None* | Override a configuration variable (repeatable). |
 | `-h, --help` | *None* | *None* | Print help information. |
 | `-V, --version` | *None* | *None* | Print version information. |
 
@@ -64,59 +58,74 @@ pinch tui
 pinch -c custom.yaml tui
 
 # Override variables on the fly while launching the TUI
-pinch -v env:staging -v target:10.0.0.1 tui
+pinch -o env:staging -o target:10.0.0.1 tui
 ```
-
----
 
 ## CLI Command Reference
 
 You can interact with specific processes, inspect configuration variables, or manage Docker networks and images directly from your shell without launching the full TUI dashboard.
 
-```
+**Commands can be abbreviated**
+
+```text
 pinch
- ├── process
- │    ├── ls (list)             List all available process titles
- │    ├── show [TITLE]          Print the command for a process (or all processes)
- │    └── run <TITLE> [-b]      Execute a process directly in foreground or background
- ├── config
- │    ├── init                  Generate a default pinch.yaml file
- │    ├── show                  Print the parsed, variable-expanded configuration
- │    └── var [NAME]            Inspect resolved configuration variables
- ├── net
- │    ├── ls (list)             List all Docker networks defined in the config
- │    ├── show [NAME]           Show the 'docker network create' command
- │    └── create [NAME]         Create a Docker network (or all defined networks)
- ├── image
- │    └── ls (list)             List all unique Docker images used in the config
- └── completion <SHELL>         Generate shell completion scripts (bash, zsh, fish)
+  processes
+    ls (list)             List all available process titles
+    show [TITLE]          Show the command for a process (or all processes if omitted)
+    run <TITLE> [-b]      Execute a process directly in foreground or background
+
+  configuration
+    init                  Generate a default pinch.yaml file
+    show                  Print the parsed, variable-expanded configuration
+    var [NAME]            Inspect resolved configuration variables
+
+  networks
+    ls (list)             List all Docker networks defined in the config
+    show [NAME]           Show the 'docker network create' command
+    create [NAME]         Create a Docker network (or all defined networks)
+
+  containers
+    ls (list)             List all unique Docker images used in the config
+
+  audit                   Inspect project metadata and container dependencies
+
+  completion <SHELL>      Generate shell completion scripts (bash, zsh, fish)
 ```
 
-### Process Management (`pinch process`)
-* **`pinch process ls`** (alias: `list`): Lists all available process titles from the configuration.
-* **`pinch process show [TITLE] [-f, --format <FORMAT>]`**: Prints the exact command associated with a process title. If `TITLE` is omitted, lists all processes.
-* **`pinch process run <TITLE> [-b, --background]`**: Runs the command associated with the title directly in the foreground or background instead of launching the TUI.
+### Process Management (`pinch proc`)
+
+* **`pinch processes ls [-f, --format <FORMAT>]`**: Lists all available process titles from the configuration.
+* **`pinch processes show [TITLE] [-f, --format <FORMAT>]`**: Prints the exact command associated with a process title. If `TITLE` is omitted, lists all processes in a map format.
+* **`pinch processes run <TITLE> [-b, --background]`**: Runs the command associated with the title directly in the foreground or background instead of launching the TUI.
   * `-b, --background`: Spawns the process detached. For processes defined with `type: "docker"`, this automatically runs the container detached (`-d`) instead of interactive (`-ti`).
 
-### Configuration Inspection (`pinch config`)
-* **`pinch config init`**: Generates a default `pinch.yaml` file in the current directory.
-* **`pinch config show [-f, --format <FORMAT>]`**: Shows the fully parsed and variable-expanded configuration.
-* **`pinch config var [NAME] [-f, --format <FORMAT>]`**: Inspects resolved configuration variables. If `NAME` is provided, prints only that variable's value; otherwise, prints all variables.
+### Configuration Inspection (`pinch conf`)
+
+* **`pinch configuration init`**: Generates a default `pinch.yaml` file in the current directory.
+* **`pinch configuration show [-f, --format <FORMAT>]`**: Shows the fully parsed and variable-expanded configuration.
+* **`pinch configuration var [NAME] [-f, --format <FORMAT>]`**: Inspects resolved configuration variables. If `NAME` is provided, prints only that variable's value; otherwise, prints all variables.
 
 ### Docker Networks (`pinch net`)
-* **`pinch net ls`** (alias: `list`): Lists all Docker networks defined in the configuration.
-* **`pinch net show [NAME] [-f, --format <FORMAT>]`**: Shows the `docker network create` command for a specific network (or all if omitted).
-* **`pinch net create [NAME]`**: Creates a specific Docker network (or all if omitted) without starting any processes.
 
-### Docker Images (`pinch image`)
-* **`pinch image ls [-f, --format <FORMAT>]`** (alias: `list`): Lists all unique, variable-resolved Docker images used by `type: "docker"` processes in the configuration.
+* **`pinch networks ls [-f, --format <FORMAT>]`**: Lists all Docker networks defined in the configuration.
+* **`pinch networks show [NAME] [-f, --format <FORMAT>]`**: Shows the `docker network create` command for a specific network (or all if omitted).
+* **`pinch networks create [NAME]`**: Creates a specific Docker network (or all if omitted) without starting any processes.
+
+### Containers (`pinch cont`)
+
+* **`pinch containers ls [-f, --format <FORMAT>]`**: Lists all unique, variable-resolved Docker images used by `type: "docker"` processes in the configuration.
 
 ```bash
 # Example: Pre-pull all required Docker images before starting the supervisor
-pinch image ls | xargs -r -n1 docker pull
+pinch container ls | xargs -r -n1 docker pull
 ```
 
+### Audit (`pinch audit`)
+
+* **`pinch audit [-f, --format <FORMAT>]`**: Prints structured audit metadata combining project identification and resolved container dependencies (defaults to `json`).
+
 ### Shell Completions (`pinch completion`)
+
 * **`pinch completion <SHELL>`**: Supports `bash`, `zsh`, and `fish`.
 
 ```bash
@@ -124,24 +133,22 @@ pinch image ls | xargs -r -n1 docker pull
 source <(pinch completion zsh)
 ```
 
----
-
 ## Multi-Format Inspection (`-f, --format`)
 
-The `process show`, `config show`, `config var`, `net show`, and `image ls` commands support multiple output formats via `-f, --format <FORMAT>`.
+The `process show`, `process ls`, `config show`, `config var`, `net show`, `net ls`, `container ls`, and `audit` commands support multiple output formats via `-f, --format <FORMAT>`.
 
 | Format | Output Style | Best Suited For |
 | :--- | :--- | :--- |
 | **`raw`** | Unquoted plain text or tab-separated pairs | Shell pipelines (`cut`, `awk`, `xargs`, `while read`) |
 | **`yaml`** | Clean YAML formatting | Human reading, configuration auditing |
 | **`json`** | Structured JSON | Automation and `jq` integration |
-| **`properties`** | Standard `key=value` lines | Environment file sourcing |
+| **`properties`** | Standard `key=value` lines | Environment file sourcing (`export $(pinch config var -f properties)`) |
 
-> **Smart Defaults:**  
-> * When inspecting a **single item** (e.g., `pinch config var target` or `pinch process show "Backend"`) or a simple list (`pinch image ls`), the output defaults to **`raw`** so it can be piped directly into scripts (`IP=$(pinch config var target)`).  
-> * When inspecting **all mapped items** (e.g., `pinch config var` or `pinch process show`), the output defaults to **`yaml`** with keys sorted alphabetically.
-
----
+> **Smart Defaults:**
+> * **`ls` subcommands** default to **`raw`** (flat line-by-line output) for easy shell composition.
+> * **`show [ITEM]`** defaults to **`raw`** when querying a single item (`pinch config var target`), or **`yaml`** when inspecting all items (`pinch config var`).
+> * **Structural commands** (`config show`, `project show`) default to **`yaml`**.
+> * **`audit`** defaults to **`json`**.
 
 ## Variable Overrides & Precedence
 
@@ -149,22 +156,20 @@ Variables defined as `{{var_name}}` inside your YAML file are resolved using a s
 
 | Priority | Source | Description | Example |
 | :--- | :--- | :--- | :--- |
-| **1 (Highest)** | **CLI `-v, --var` flags** | Explicit runtime overrides | `pinch -v env:prod` |
+| **1 (Highest)** | **CLI `-o, --override` flags** | Explicit runtime overrides | `pinch -o env:prod` |
 | **2** | **OS Environment Variables** | Current shell context | `export env=staging` |
 | **3** | **YAML `vars:` block** | Project defaults defined in `pinch.yaml` | `env: "dev"` |
 | **4 (Lowest)** | **Built-in Variables** | System path context | `{{pwd}}`, `{{user}}`, `{{home}}` |
 
-Because Pinch automatically falls back to your OS environment variables, you do not need to pass `-v` for variables already exported in your shell.
+Because Pinch automatically falls back to your OS environment variables, you do not need to pass `-o` for variables already exported in your shell.
 
 ```bash
 # Check the resolved value of a variable
 pinch config var target
 
 # Override a variable on the fly
-pinch process run "Simple Ping" -v target:1.1.1.1 -v flags:"-c 4"
+pinch process run "Simple Ping" -o target:1.1.1.1 -o flags:"-c 4"
 ```
-
----
 
 ## Keyboard Shortcuts
 
@@ -195,6 +200,7 @@ Pinch relies heavily on keyboard navigation. Behavior adapts automatically depen
 | `Enter` | Jump to the bottom of the logs (tail), OR focus the TUI (if in TUI mode). |
 
 ### TUI Mode (Interactive Process Focus)
+
 If a process is configured with `mode: "tui"`, pressing `Enter` attaches your keyboard directly to that process.
 * While focused, all keystrokes are forwarded directly to the underlying application (`top`, `vim`, `htop`, etc.).
 * Press **`Ctrl+X`** to detach your keyboard from the TUI and return to Grid Navigation.
@@ -210,6 +216,7 @@ If a process is configured with `mode: "tui"`, pressing `Enter` attaches your ke
 | `Enter` | Jump to the bottom of the combined logs (tail). |
 
 ### Mouse Support
+
 * **Focus:** Click anywhere on a pane to focus it.
 * **Scroll:** Mouse wheel scrolls up and down through logs.
 * **Header Buttons:** Click the bracketed indicators in a pane's title bar to trigger actions:
@@ -217,8 +224,6 @@ If a process is configured with `mode: "tui"`, pressing `Enter` attaches your ke
   * `[ ]`: Restart
   * `[W]`: Toggle Wrap
   * `[Z]`: Toggle Zoom
-
----
 
 ## Configuration (`pinch.yaml`)
 
@@ -228,7 +233,7 @@ Configuration is defined in YAML. You can define global variables, default behav
 
 | Setting | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `title` | String | *Required* | The title displayed at the top of the dashboard. |
+| `project` | Object | *Required* | High-level project metadata (`name`, `type`, `exposure`, `lifecycle`, `auth`). |
 | `vars` | Map | `{}` | Custom variables (e.g., `env: "dev"`). Built-ins: `{{pwd}}`, `{{user}}`, `{{home}}`. |
 | `logs_max_size` | Integer | *None* | Maximum number of log lines to retain in memory per pane. |
 | `shell` | Boolean | `false` | If true, executes shorthand commands via `bash -c`. |
@@ -238,13 +243,14 @@ Configuration is defined in YAML. You can define global variables, default behav
 | `watch_settle_time_ms` | Integer | `800` | Debounce delay in milliseconds when watching files for changes. |
 
 ### Docker Networks
+
 You can define Docker networks in the `docker_networks` block at the root of your configuration. If only **one** network is defined, any process specifying a `docker-intrude` run type will default to it automatically.
 
 ```yaml
 docker_networks:
   # Simple format (String maps to the subnet)
   simple_net_{{env}}: "172.18.0.1/24"
-  
+
   # Detailed format (Object maps to subnet and custom args as a list)
   advanced_net:
     subnet: "172.19.0.1/24"
@@ -255,7 +261,8 @@ docker_networks:
 ```
 
 ### Processes
-Each item under `processes` defines a process to supervise. You must define a `run` configuration, which can either be a shorthand command string or a structured object using `cmd:` and `opts:`.
+
+Each item under `processes` defines a process to supervise:
 
 * `title`: The display name of the process.
 * `run`: How the process is executed. Supports shorthand strings or detailed objects:
@@ -279,10 +286,13 @@ Each item under `processes` defines a process to supervise. You must define a `r
 * `auto_start`, `auto_restart`, `grace_period`, `watch_settle_time_ms`: Overrides global defaults for this specific process.
 
 #### Example Process Configuration
+
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
 project:
-  name: "Development Dashboard"
+  name: "MyProject"
+  type: service
+  exposure: internal
 docker_networks:
   hi: "172.18.23.0/24"
 vars:
@@ -291,14 +301,12 @@ vars:
 processes:
   - title: "Simple Ping"
     run: "ping {{ target }} {{ flags }}"
-
   - title: "System Monitor"
     mode: "tui"
     run:
       type: "process"
       bash: false
       cmd: "top"
-
   - title: "Nginx Test"
     run:
       type: "docker"
@@ -308,7 +316,6 @@ processes:
         --network hi
         --ip 172.18.23.10
       args: "nginx -g 'daemon off;'"
-
   - title: "Google DNS (Namespace)"
     link: "https://www.google.com"
     run:
@@ -318,37 +325,85 @@ processes:
       cmd: "ping {{ target }} {{ flags }}"
 ```
 
----
-
 ## Layout Engine
 
-Pinch uses a progressive, edge-carving layout system. Items defined in the `layout` array sequentially carve out space from the edges of the terminal. Any processes not explicitly listed in the layout automatically fill whatever space is left in the center grid, *unless* you designate a specific block or split to hold them using `unassigned: true`. You can also use the special title `"Combined Logs"` to embed the global log tail directly into your dashboard.
+Pinch uses a **progressive, edge-carving** layout system. 
 
-### Visualizing Edge-Carving
+### How Edge-Carving Works
 
+1. **The Starting Canvas:** Pinch begins with a single full-screen rectangle (`100% width x 100% height`).
+2. **Sequential Carving:** Each block defined in your `layout` array carves out a slice from one of the outer edges (`left`, `right`, `top`, or `bottom`) of the *currently remaining* screen space.
+3. **Sub-splitting:** A carved slice can be divided into sub-panes (`splits`) horizontally or vertically.
+4. **Unassigned Area:** Any process *not* explicitly placed in the layout automatically populates whatever space remains in the center (or gets routed to a block with `unassigned: true`).
+
+---
+
+### Visual Step-by-Step
+
+Given this configuration:
+
+```yaml
+layout:
+  # Step 1: Carve 30% from the LEFT edge (split top/bottom)
+  - edge: "left"
+    size_percentage: 30
+    direction: "vertical"
+    splits:
+      - title: "System Monitor"
+        size_percentage: 50
+      - title: "CPU & Mem Stats"
+        size_percentage: 50
+
+  # Step 2: Carve 25% from the BOTTOM edge of the REMAINING space
+  - edge: "bottom"
+    size_percentage: 25
+    direction: "horizontal"
+    splits:
+      - title: "Combined Logs"
+        size_percentage: 100
+
+  # Step 3: Unassigned processes ("Network Ping", "Disk Usage") fill the remaining center
 ```
-+-------------------------------------------------------+
-|  System Monitor (60%)          |                      |
-|--------------------------------|   Unassigned Grid    |
-|  CPU & Mem Stats (40%)         |    (Center Area)     |
-|  [Edge: Left, Size: 35%]       |                      |
-+-------------------------------------------------------+
-|  Combined Logs (50%)      |  Simulated Service (50%)  |
-|  [Edge: Bottom, Size: 30%]                            |
-+-------------------------------------------------------+
+
+#### Resulting Terminal Grid
+
+```text
++-------------------+-----------------------------------+
+|                   |                                   |
+|  System Monitor   |           Network Ping            |
+| (30% left / top)  |        (Unassigned Center)        |
+|                   |                                   |
+|                   |-----------------------------------|
+|                   |                                   |
+|-------------------|            Disk Usage             |
+|                   |        (Unassigned Center)        |
+|  CPU & Mem Stats  |                                   |
+| (30% left / btm)  |-----------------------------------|
+|                   |           Combined Logs           |
+|                   |   (25% bottom of remaining space) |
+|                   |                                   |
++-------------------+-----------------------------------+
 ```
 
-### Layout Options
-* `edge`: Which side to carve from (`left`, `right`, `top`, `bottom`).
-* `size_percentage`: How much of the currently available space to take (0–100).
-* `direction`: How to arrange sub-splits (`horizontal` or `vertical`).
-* `splits`: An array of sub-panes to place inside this carved edge.
-* `unassigned`: (Optional boolean) If `true`, all remaining unassigned processes are routed to this specific block or split instead of the default center area.
+---
 
-### Example Layout Configuration
+### Layout Configuration Options
+
+* **`edge`**: Which side to carve from (`left`, `right`, `top`, `bottom`).
+* **`size_percentage`**: Percentage of the *currently available* screen space to carve out (0 to 100).
+* **`direction`**: Orientation for sub-splits (`horizontal` or `vertical`).
+* **`splits`**: An array of sub-panes inside this carved slice.
+  * **`title`**: Display title matching a process, or `"Combined Logs"` for the global log stream.
+  * **`size_percentage`**: Percentage of space within this slice allocated to the sub-pane.
+  * **`unassigned`**: (`true`/`false`) If set to `true`, routes all remaining unassigned processes into this sub-pane instead of the default center space.
+
+---
+
+### Full Example
+
 ```yaml
 project:
-  name: "Development Dashboard"
+  name: "MyProject"
 processes:
   - title: "System Monitor"
     run: "top"
@@ -360,7 +415,7 @@ processes:
   - title: "Database"
     run: "docker logs -f pg_db"
 layout:
-  # 1. Carve out the left 35% of the screen, split vertically
+  # 1. Carve out 35% from the left edge, split into System Monitor and Database
   - edge: "left"
     size_percentage: 35
     direction: "vertical"
@@ -369,13 +424,13 @@ layout:
         size_percentage: 50
       - title: "Database"
         size_percentage: 50
-  # 2. Carve out the bottom 30% of the remaining space for global logs and unassigned processes
+  # 2. Carve out 30% from the bottom of the remaining screen for global logs and unassigned processes
   - edge: "bottom"
     size_percentage: 30
     direction: "horizontal"
     splits:
       - title: "Combined Logs"
         size_percentage: 50
-      - unassigned: true # "Backend API" and "Frontend UI" will be placed here automatically
+      - unassigned: true # "Backend API" and "Frontend UI" are automatically placed side-by-side here
         size_percentage: 50
 ```

@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             generate(target_shell, &mut cmd, "pinch", &mut std::io::stdout());
             return Ok(());
         }
-        cli::CliAction::Config(cli::ConfigCommand::Init) => {
+        cli::CliAction::Configuration(cli::ConfigurationCommand::Init) => {
             cli::handle_init();
             return Ok(());
         }
@@ -45,16 +45,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
         },
-        cli::CliAction::Config(cmd) => match cmd {
-            cli::ConfigCommand::Show { format } => {
+        cli::CliAction::Configuration(cmd) => match cmd {
+            cli::ConfigurationCommand::Show { format } => {
                 cli::show_config(&raw_config, &parsed.vars, format)?;
                 return Ok(());
             }
-            cli::ConfigCommand::Var { name, format } => {
+            cli::ConfigurationCommand::Var { name, format } => {
                 cli::show_vars(&raw_config, &parsed.vars, name.as_deref(), format)?;
                 return Ok(());
             }
-            cli::ConfigCommand::Init => unreachable!(),
+            cli::ConfigurationCommand::Init => unreachable!(),
         },
         cli::CliAction::Audit(cmd) => match cmd {
             cli::AuditCommand::Show { format } => {
