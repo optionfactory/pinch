@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
 #[doc = "Root configuration manifest for a Pinch project (`pinch.yaml`)."]
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -49,9 +49,6 @@ pub struct ProjectManifest {
     #[doc = "Primary architectural role of the project."]
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub project_type: Option<ProjectType>,
-    #[doc = "Network ingress reachability for the project."]
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub exposure: Option<ExposureType>,
     #[doc = "Operational maintenance status of the repository."]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lifecycle: Option<LifecycleType>,
@@ -61,14 +58,14 @@ pub struct ProjectManifest {
     #[doc = "Sensitive data classifications handled by the service."]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sensitivity: Option<Vec<Sensitivity>>,
-    #[doc = "List of deployment environments supported by this project (e.g., `dev`, `staging`, `prod`)."]
+    #[doc = "Environment-specific deployment configurations."]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub environments: Option<Vec<String>>,
+    pub environments: Option<BTreeMap<EnvironmentType, EnvironmentConfig>>,
 }
 
 #[doc = "Primary architectural role of the project."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum ProjectType {
     #[doc = "Shared code dependency imported by other projects."]
@@ -81,22 +78,11 @@ pub enum ProjectType {
     Job,
 }
 
-#[doc = "Network ingress reachability for the project."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
-#[serde(deny_unknown_fields)]
-pub enum ExposureType {
-    #[doc = "Reachable from the public internet or Cloudflare edge."]
-    Internet,
-    #[doc = "Reachable only inside the company VPN, VPC, or internal service mesh."]
-    Internal,
-    #[doc = "No incoming network traffic (e.g., background worker or CLI tool)."]
-    None,
-}
+
 
 #[doc = "Operational maintenance status of the repository."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum LifecycleType {
     #[doc = "Actively developed and supported in production."]
@@ -111,7 +97,7 @@ pub enum LifecycleType {
 
 #[doc = "Sensitive data classifications handled by the service."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum Sensitivity {
     #[doc = "Non-sensitive data safe for public distribution."]
@@ -130,7 +116,7 @@ pub enum Sensitivity {
 
 #[doc = "Primary authentication mechanism for ingress requests."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum AuthType {
     #[doc = "Identity provider."]
@@ -194,6 +180,70 @@ pub enum RunManifest {
     Shorthand(String),
     #[doc = "Explicit execution configuration specifying process type (`process`, `docker`, or `docker-intrude`)."]
     Detailed(RunKind),
+}
+
+#[doc = "Supported deployment environment types."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum EnvironmentType {
+    #[doc = "Local developer machines or active feature branch environments."]
+    Development,
+    #[doc = "Automated CI/CD integration and unit testing environments."]
+    Testing,
+    #[doc = "Dedicated Quality Assurance and manual regression environment."]
+    Qa,
+    #[doc = "Pre-production mirror environment for final acceptance testing."]
+    Staging,
+    #[doc = "Sales demo, customer sandbox, or PR preview environments."]
+    Demo,
+    #[doc = "Live customer-facing production environment."]
+    Production,
+    #[doc = "Disaster recovery, warm standby, or secondary failover region."]
+    DisasterRecovery,
+    #[doc = "Uncategorized or custom specialized environment."]
+    Other,
+}
+
+#[doc = "Environment-specific deployment configuration."]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EnvironmentConfig {
+    #[doc = "Network ingress reachability for this specific environment."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub exposure: Option<ExposureType>,
+
+    #[doc = "Map of domain names to their management origin (managed vs external)."]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub domains: Option<BTreeMap<String, DomainManagement>>,
+}
+
+#[doc = "Domain management and ownership origin."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum DomainManagement {
+    #[doc = "Managed directly by our infrastructure / DNS / CDN rules."]
+    Managed,
+    #[doc = "Managed externally by a client, partner, or third party."]
+    External,
+}
+
+#[doc = "Network ingress reachability for the project."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum ExposureType {
+    #[doc = "Reachable only on localhost or local machine process loopback."]
+    Local,
+    #[doc = "Reachable only inside the private corporate VPN, VPC, or internal service mesh."]
+    RestrictedVpn,
+    #[doc = "Reachable from the internet but restricted by IP allowlisting or CIDR controls."]
+    RestrictedIp,
+    #[doc = "Publicly reachable from the internet."]
+    Internet,
+    #[doc = "No incoming network traffic (e.g., background worker or CLI tool)."]
+    None,
 }
 
 #[doc = "Explicit runtime environment type for a supervised process."]
@@ -274,7 +324,7 @@ pub struct LayoutBlock {
 
 #[doc = "Display rendering mode for a process pane."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum PaneMode {
     #[doc = "Standard streaming log tailer with wrap and truncation controls."]
@@ -299,7 +349,7 @@ pub struct LayoutSplit {
 
 #[doc = "Target edge of the terminal space to carve from."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum LayoutEdge {
     #[doc = "Carve from the top edge."]

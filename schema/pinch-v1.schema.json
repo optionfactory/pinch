@@ -180,18 +180,71 @@
         }
       ]
     },
+    "DomainManagement": {
+      "description": "Domain management and ownership origin.",
+      "oneOf": [
+        {
+          "description": "Managed directly by our infrastructure / DNS / CDN rules.",
+          "type": "string",
+          "const": "managed"
+        },
+        {
+          "description": "Managed externally by a client, partner, or third party.",
+          "type": "string",
+          "const": "external"
+        }
+      ]
+    },
+    "EnvironmentConfig": {
+      "description": "Environment-specific deployment configuration.",
+      "type": "object",
+      "properties": {
+        "domains": {
+          "description": "Map of domain names to their management origin (managed vs external).",
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {
+            "$ref": "#/$defs/DomainManagement"
+          }
+        },
+        "exposure": {
+          "description": "Network ingress reachability for this specific environment.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ExposureType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
     "ExposureType": {
       "description": "Network ingress reachability for the project.",
       "oneOf": [
         {
-          "description": "Reachable from the public internet or Cloudflare edge.",
+          "description": "Reachable only on localhost or local machine process loopback.",
           "type": "string",
-          "const": "internet"
+          "const": "local"
         },
         {
-          "description": "Reachable only inside the company VPN, VPC, or internal service mesh.",
+          "description": "Reachable only inside the private corporate VPN, VPC, or internal service mesh.",
           "type": "string",
-          "const": "internal"
+          "const": "restricted-vpn"
+        },
+        {
+          "description": "Reachable from the internet but restricted by IP allowlisting or CIDR controls.",
+          "type": "string",
+          "const": "restricted-ip"
+        },
+        {
+          "description": "Publicly reachable from the internet.",
+          "type": "string",
+          "const": "internet"
         },
         {
           "description": "No incoming network traffic (e.g., background worker or CLI tool).",
@@ -451,25 +504,14 @@
           ]
         },
         "environments": {
-          "description": "List of deployment environments supported by this project (e.g., `dev`, `staging`, `prod`).",
+          "description": "Environment-specific deployment configurations.",
           "type": [
-            "array",
+            "object",
             "null"
           ],
-          "items": {
-            "type": "string"
+          "additionalProperties": {
+            "$ref": "#/$defs/EnvironmentConfig"
           }
-        },
-        "exposure": {
-          "description": "Network ingress reachability for the project.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ExposureType"
-            },
-            {
-              "type": "null"
-            }
-          ]
         },
         "lifecycle": {
           "description": "Operational maintenance status of the repository.",
