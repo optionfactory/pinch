@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
-use schemars::{json_schema, Schema, SchemaGenerator};
+use schemars::{Schema, SchemaGenerator};
 
 #[doc = "Root configuration manifest for a Pinch project (`pinch.yaml`)."]
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -398,12 +398,36 @@ impl DockerNetworkConfig {
 }
 
 
-fn environments_schema(g: &mut SchemaGenerator) -> Schema {
-    let env_config_schema = g.subschema_for::<EnvironmentConfig>();
-    let env_type_schema = g.subschema_for::<EnvironmentType>();
-    json_schema!({
+fn environments_schema(generator: &mut SchemaGenerator) -> Schema {
+    let env_config_schema = generator.subschema_for::<EnvironmentConfig>();
+
+    let env_type_schema = EnvironmentType::json_schema(generator);
+    let env_type_val = serde_json::to_value(&env_type_schema).unwrap_or_default();
+
+    let mut properties = serde_json::Map::new();
+
+    if let Some(one_of) = env_type_val.get("oneOf").and_then(|v| v.as_array()) {
+        for item in one_of {
+            if let Some(key) = item
+                .get("const")
+                .and_then(|k| k.as_str())
+                .or_else(|| item.get("enum").and_then(|e| e.get(0)).and_then(|k| k.as_str()))
+            {
+                let mut prop = serde_json::Map::new();
+
+                if let Some(desc) = item.get("description").and_then(|d| d.as_str()) {
+                    prop.insert("description".to_string(), serde_json::Value::String(desc.to_string()));
+                }
+                prop.insert("allOf".to_string(), serde_json::json!([env_config_schema]));
+                properties.insert(key.to_string(), serde_json::Value::Object(prop));
+            }
+        }
+    }
+
+    let schema_val = serde_json::json!({
         "type": ["object", "null"],
-        "propertyNames": env_type_schema,
-        "additionalProperties": env_config_schema
-    })
+        "properties": properties,
+        "additionalProperties": false
+    });
+    serde_json::from_value(schema_val).expect("valid schema")
 }

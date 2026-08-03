@@ -223,51 +223,6 @@
       },
       "additionalProperties": false
     },
-    "EnvironmentType": {
-      "description": "Supported deployment environment types.",
-      "oneOf": [
-        {
-          "description": "Local developer machines or active feature branch environments.",
-          "type": "string",
-          "const": "development"
-        },
-        {
-          "description": "Automated CI/CD integration and unit testing environments.",
-          "type": "string",
-          "const": "testing"
-        },
-        {
-          "description": "Dedicated Quality Assurance and manual regression environment.",
-          "type": "string",
-          "const": "qa"
-        },
-        {
-          "description": "Pre-production mirror environment for final acceptance testing.",
-          "type": "string",
-          "const": "staging"
-        },
-        {
-          "description": "Sales demo, customer sandbox, or PR preview environments.",
-          "type": "string",
-          "const": "demo"
-        },
-        {
-          "description": "Live customer-facing production environment.",
-          "type": "string",
-          "const": "production"
-        },
-        {
-          "description": "Disaster recovery, warm standby, or secondary failover region.",
-          "type": "string",
-          "const": "disaster-recovery"
-        },
-        {
-          "description": "Uncategorized or custom specialized environment.",
-          "type": "string",
-          "const": "other"
-        }
-      ]
-    },
     "ExposureType": {
       "description": "Network ingress reachability for the project.",
       "oneOf": [
@@ -554,12 +509,73 @@
             "object",
             "null"
           ],
-          "additionalProperties": {
-            "$ref": "#/$defs/EnvironmentConfig"
+          "properties": {
+            "demo": {
+              "description": "Sales demo, customer sandbox, or PR preview environments.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "development": {
+              "description": "Local developer machines or active feature branch environments.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "disaster-recovery": {
+              "description": "Disaster recovery, warm standby, or secondary failover region.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "other": {
+              "description": "Uncategorized or custom specialized environment.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "production": {
+              "description": "Live customer-facing production environment.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "qa": {
+              "description": "Dedicated Quality Assurance and manual regression environment.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "staging": {
+              "description": "Pre-production mirror environment for final acceptance testing.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            },
+            "testing": {
+              "description": "Automated CI/CD integration and unit testing environments.",
+              "allOf": [
+                {
+                  "$ref": "#/$defs/EnvironmentConfig"
+                }
+              ]
+            }
           },
-          "propertyNames": {
-            "$ref": "#/$defs/EnvironmentType"
-          }
+          "additionalProperties": false
         },
         "lifecycle": {
           "description": "Operational maintenance status of the repository.",
