@@ -26,7 +26,7 @@ pub fn render_single<T: Serialize + std::fmt::Display>(value: &T, format: Option
     match format.unwrap_or(OutputFormat::Raw) {
         OutputFormat::Raw | OutputFormat::Properties => println!("{}", value),
         OutputFormat::Yaml => {
-            let yaml_str = serde_yaml::to_string(value).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
+            let yaml_str = serde_saphyr::to_string(value).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
             print!("{}", yaml_str);
         }
         OutputFormat::Json => {
@@ -46,7 +46,7 @@ pub fn render_list<T: Serialize + std::fmt::Display>(list: &[T], format: Option<
             }
         }
         OutputFormat::Yaml => {
-            let yaml_str = serde_yaml::to_string(list).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
+            let yaml_str = serde_saphyr::to_string(&list).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
             print!("{}", yaml_str);
         }
         OutputFormat::Json => {
@@ -65,7 +65,7 @@ where
 {
     match format.unwrap_or(OutputFormat::Yaml) {
         OutputFormat::Yaml => {
-            let yaml_str = serde_yaml::to_string(map).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
+            let yaml_str = serde_saphyr::to_string(map).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
             print!("{}", yaml_str);
         }
         OutputFormat::Raw => {
@@ -95,7 +95,7 @@ pub fn render_object<T: Serialize + Debug>(
     let fmt = format.unwrap_or(default_format);
     match fmt {
         OutputFormat::Yaml => {
-            let yaml_str = serde_yaml::to_string(value).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
+            let yaml_str = serde_saphyr::to_string(value).map_err(|e| format!("Failed to serialize to YAML: {}", e))?;
             print!("{}", yaml_str);
         }
         OutputFormat::Json => {

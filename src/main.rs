@@ -36,7 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file = File::open(config_path).map_err(|e| format!("Failed to open configuration '{}': {}", config_path, e))?;
     let reader = BufReader::new(file);
     let raw_config: PinchManifest =
-        serde_yaml::from_reader(reader).map_err(|e| format!("Failed to parse YAML config: {}", e))?;
+        serde_saphyr::from_reader(reader).map_err(|e| format!("Failed to parse YAML config: {}", e))?;
     match parsed.action {
         CliAction::Project(cmd) => match cmd {
             ProjectCommand::Show { format } => {
