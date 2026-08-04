@@ -1,5 +1,5 @@
 use crate::config::{LayoutBlock, LayoutDirection, LayoutEdge};
-use crate::process::panes::ProcessPane;
+use crate::processes::panes::ProcessPane;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

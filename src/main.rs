@@ -5,7 +5,7 @@ use pinch::cli::{
 };
 use pinch::config::{PinchManifest, RunMode};
 use pinch::networks;
-use pinch::process;
+use pinch::processes;
 use pinch::ui;
 use std::fs::File;
 use std::io::BufReader;
@@ -80,7 +80,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .find(|p| p.title == title)
                     .ok_or_else(|| format!("Process with title '{}' not found in configuration", title))?;
 
-                let mut cmd = process::build_std_command(proc)?;
+                let mut cmd = processes::build_std_command(proc)?;
 
                 if proc.run_mode == RunMode::Spawn {
                     cmd.stdin(std::process::Stdio::null());

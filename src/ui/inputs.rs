@@ -1,5 +1,5 @@
 use crate::config::PaneMode;
-use crate::process::panes::{LogMode, ProcessState};
+use crate::processes::panes::{LogMode, ProcessState};
 use crate::ui::DashboardState;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;

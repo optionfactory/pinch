@@ -1,6 +1,6 @@
 use crate::config::PinchConfig;
-use crate::process::panes::{ProcessPane, ProcessState};
-use crate::process::ptys::{PtyHandle, spawn_process};
+use crate::processes::panes::{ProcessPane, ProcessState};
+use crate::processes::ptys::{PtyHandle, spawn_process};
 use crate::ui::DashboardState;
 use crate::ui::inputs::{UserAction, handle_key, handle_mouse};
 use crossterm::event::Event;

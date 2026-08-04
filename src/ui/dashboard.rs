@@ -1,5 +1,5 @@
 use crate::config::LayoutBlock;
-use crate::process::panes::ProcessPane;
+use crate::processes::panes::ProcessPane;
 use crate::ui::layouts::PaneGeometry;
 use ratatui::layout::Rect;
 use ratatui::text::Line;
