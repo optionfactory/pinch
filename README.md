@@ -1,23 +1,23 @@
 # Pinch
 **The Executable Service Manifest & DevSecOps Supervisor**
 
-Pinch is a terminal-based process supervisor, developer workflow runner, and **lightweight "compliance-as-code" catalog**.
+Pinch is a terminal-based process supervisor, developer workflow runner, and **declarative governance catalog**.
 
-Most software projects suffer from a disconnect between execution and governance: traditional process runners know how to execute code but ignore ownership and SLAs, while dedicated compliance portals capture governance metadata but sit in separate systems that developers rarely visit after onboarding.
+Most software projects suffer from a fundamental disconnect between runtime execution and governance: traditional process runners know how to execute code but ignore ownership, data classification, and SLAs, while enterprise compliance portals capture regulatory metadata in disconnected silos that developers rarely visit after onboarding.
 
-Pinch solves this with an **executable service manifest** (`pinch.yaml`). The exact same file that supervises your local background daemons, Docker namespaces, and interactive TUI tasks also serves as your repository's authoritative contract for operational tiers, data sensitivity, and European regulatory compliance.
+Pinch solves this with an **executable service manifest** (`pinch.yaml`). The exact same file that supervises your local background daemons, Docker namespaces, and interactive TUI tasks also serves as your repository's authoritative code contract for operational tiers, data sensitivity, and regulatory applicability.
 
 ---
 
 ## A Single Source of Truth for Cross-Functional Teams
 
-By uniting runtime supervision with **"compliance-as-code"**, Pinch creates a single source of truth that keeps three critical aspects of your software contract aligned without creating metadata rot:
+By uniting runtime supervision with **declarative governance**, Pinch creates a single source of truth that keeps three critical aspects of your software contract aligned without creating metadata rot:
 
 * **Local Execution & Workflows:** Zero-friction runtime supervision—managing multi-process TUIs, Docker namespaces, file watching, and log tailing in one terminal command (`pinch tui`).
-* **Operational Standards & SLAs:** Consistent service tiers (`tier-1` to `tier-4`), lifecycle status, environment exposures, and container dependencies enforced across repositories.
-* **Regulatory Governance:** European and Italian compliance mandates (DORA, NIS2, CRA, EU AI Act, GDPR, Garante AdS) verifiable directly in CI pipelines (`pinch audit`).
+* **Operational Standards & SLAs:** Explicit code contracts for service tiers (`tier-1` to `tier-4`), lifecycle status, environment exposures, and container dependencies enforced across repositories.
+* **Regulatory Governance & Tracking:** European and Italian compliance applicability (DORA, NIS2, CRA, EU AI Act, GDPR, Garante AdS) tracked alongside code and structurally validated in CI pipelines (`pinch audit`).
 
-Because `pinch.yaml` powers the daily development environment, architecture and compliance metadata never go stale—if the manifest breaks, local development breaks.
+Because `pinch.yaml` powers the daily development environment, architecture and governance metadata never go stale, if the manifest breaks, local development breaks.
 
 ---
 
@@ -30,6 +30,25 @@ To enable autocompletion, schema validation, and regulatory applicability toolti
 ```
 
 ---
+
+## Security & Trust Model
+
+Pinch is a local process supervisor, developer workflow runner, and declarative governance catalog. To evaluate Pinch securely, its trust model and execution boundaries must be understood:
+
+### 1. The User is the Security Boundary
+Pinch runs locally under the permissions of the invoking user. It does not introduce an elevated daemon, network service, or multi-tenant boundary. If a user executes `pinch` on their workstation or in a CI/CD pipeline, processes spawn with that user's existing OS privileges and environment variables.
+
+### 2. Treat `pinch.yaml` as Executable Code
+A `pinch.yaml` manifest is explicitly designed to execute arbitrary shell commands, spawn Docker containers, and interact with local namespaces. 
+* **Never execute an untrusted `pinch.yaml` file.** Treat manifests with the exact same security posture as a `Makefile`, `Dockerfile`, `docker-compose.yml`, or `.sh` script.
+* **Variable Expansion:** String interpolation (`{{var_name}}`) in commands, environment overrides, and CLI flags is intended to construct dynamic commands. Supplying untrusted user input into variable overrides without external sanitization is outside the intended threat model.
+
+### 3. Docker & Privilege Passthrough
+When using `type: "docker"` or `type: "docker-intrude"`, Pinch passes configured flags (`opts`, `args`, `--privileged`, `--net=host`, etc.) directly to the Docker daemon. Pinch does not block or deny-list valid Docker flags, as local development and namespace inspection frequently require host-level access. Security boundaries for container execution must be enforced at the Docker daemon or OS level.
+
+### 4. Scope of "Compliance-as-Code"
+The compliance and regulatory metadata blocks (`dora`, `cra`, `nis2`, `aiact`, `gdpr`, and `ads`) are authoritative **declarative governance records**. They allow cross-functional teams to assert operational SLAs and regulatory applicability directly alongside runtime definitions. `pinch audit` verifies structural validity and outputs structured reporting—it is not an automated static analysis engine that legally certifies software resilience or privacy compliance.
+
 
 ## Installation
 
@@ -44,7 +63,8 @@ curl -sSL \
   && sudo chmod +x /usr/local/bin/pinch
 ```
 
-> **Note:** Using the `docker_ip` configuration requires [`docker-intrude`](https://github.com/optionfactory/docker-intrude) to be installed on your system.
+> **Note:** Using processes configured with `type: "docker-intrude"` requires [`docker-intrude`](https://github.com/optionfactory/docker-intrude) to be installed and accessible in your system's `PATH`.
+
 
 ### 2. Build from Source
 
@@ -102,27 +122,24 @@ You can interact with specific processes, inspect configuration variables, or ma
 
 ```text
 pinch
-  processes
-    ls (list)             List all available process titles
-    show [TITLE]          Show the command for a process (or all processes if omitted)
-    run <TITLE> [-b]      Execute a process directly in foreground or background
-
-  configuration
-    init                  Generate a default pinch.yaml file
-    show                  Print the parsed, variable-expanded configuration
-    var [NAME]            Inspect resolved configuration variables
-
-  networks
-    ls (list)             List all Docker networks defined in the config
-    show [NAME]           Show the 'docker network create' command
-    create [NAME]         Create a Docker network (or all defined networks)
-
-  containers
-    ls (list)             List all unique Docker images used in the config
-
-  audit                   Inspect project metadata, compliance rules, and container dependencies
-
-  completion <SHELL>      Generate shell completion scripts (bash, zsh, fish)
+├── processes
+│   ├── ls (list)             List all available process titles
+│   ├── show [TITLE]          Show the command for a process (or all processes if omitted)
+│   └── run <TITLE> [-b]      Execute a process directly in foreground or background
+├── configuration
+│   ├── init                  Generate a default pinch.yaml file
+│   ├── show                  Print the parsed, variable-expanded configuration
+│   └── var [NAME]            Inspect resolved configuration variables
+├── project
+│   └── show                  Show the project metadata block
+├── networks
+│   ├── ls (list)             List all Docker networks defined in the config
+│   ├── show [NAME]           Show the 'docker network create' command
+│   └── create [NAME]         Create a Docker network (or all defined networks)
+├── containers
+│   └── ls (list)             List all unique Docker images used in the config
+├── audit                     Inspect project metadata, compliance rules, and container dependencies
+└── completion <SHELL>        Generate shell completion scripts (bash, zsh, fish)
 ```
 
 ### Process Management (`pinch proc`)
@@ -194,11 +211,9 @@ Variables defined as `{{var_name}}` inside your YAML file are resolved using a s
 | Priority | Source | Description | Example |
 | :--- | :--- | :--- | :--- |
 | **1 (Highest)** | **CLI `-o, --override` flags** | Explicit runtime overrides | `pinch -o env:prod` |
-| **2** | **OS Environment Variables** | Current shell context | `export env=staging` |
-| **3** | **YAML `vars:` block** | Project defaults defined in `pinch.yaml` | `env: "dev"` |
-| **4 (Lowest)** | **Built-in Variables** | System path context | `{{pwd}}`, `{{user}}`, `{{home}}` |
+| **2** | **YAML `vars:` block** | Project defaults defined in `pinch.yaml` | `env: "dev"` |
+| **3 (Lowest)** | **Built-in Variables** | System path context | `{{pwd}}`, `{{user}}`, `{{home}}` |
 
-Because Pinch automatically falls back to your OS environment variables, you do not need to pass `-o` for variables already exported in your shell.
 
 ```bash
 # Check the resolved value of a variable
@@ -259,10 +274,11 @@ If a process is configured with `mode: "tui"`, pressing `Enter` attaches your ke
 * **Focus:** Click anywhere on a pane to focus it.
 * **Scroll:** Mouse wheel scrolls up and down through logs.
 * **Header Buttons:** Click the bracketed indicators in a pane's title bar to trigger actions:
-  * `[ ]` / `[ ]`: Start / Stop
-  * `[ ]`: Restart
-  * `[W]`: Toggle Wrap
-  * `[Z]`: Toggle Zoom
+  * `[▶]` / `[■]`: Start / Stop (Green / Red)
+  * `[↺]`: Restart (Orange)
+  * `[↩]`: Toggle Wrap / Pending Auto-Restart (Cyan / Purple)
+  * `[⤢]`: Toggle Zoom (Purple)
+  * `[↗]`: Open Link (Electric Blue, visible when `link:` is configured)
 
 ---
 
@@ -295,7 +311,7 @@ project:
   name: "Customer Fraud AI Analyzer"
   type: service               # library | service | tool | job
   lifecycle: active           # active | maintenance | deprecated | prototype
-  tier: tier-1                # tier-1 (24/7 SLA) -> tier-4 (experimental)
+  tier: tier1                 # tier1 (24/7 SLA) -> tier4 (experimental)
   authentication:
     - jwt
     - mtls
@@ -323,16 +339,15 @@ project:
 ```
 
 #### Governance & Regulatory Standards Covered
-* **Service Tiers (`tier`):** Maps internal operational priority (`tier-1` critical path down to `tier-4` prototype).
+* **Service Tiers (`tier`):** Maps internal operational priority (`tier1` critical path down to `tier4` prototype).
 * **Data Sensitivity (`sensitivity`):** Classifies assets handled by the project (`public`, `internal`, `confidential`, `restricted`, `pii`, `spi`, `biometric`, `pci`, `financial`, `phi`).
 * **European Regulatory Mappings (`compliance`):**
   * **`dora`:** Tracks whether the project supports a Critical or Important Function (`cif-supported` / `non-critical`) under EU financial resilience rules.
-  * **`cra`:** Maps Cyber Resilience Act classes (`default`, `important-class-1`, `important-class-2`, `critical`).
+  * **`cra`:** Maps Cyber Resilience Act classes (`default`, `important-class1`, `important-class-2`, `critical`).
   * **`nis2`:** Non-financial critical infrastructure entities (`essential-entity`, `important-entity`, `out-of-scope`).
-  * **`ai_act`:** Enforces EU AI Act risk classifications (`high-risk`, `general-purpose-ai`, `limited-risk`, `minimal-risk`).
+  * **`aiact`:** Enforces EU AI Act risk classifications (`high-risk`, `general-purpose-ai`, `limited-risk`, `minimal-risk`).
   * **`gdpr`:** Explicitly captures legal processing roles (`controller`, `processor`, `sub-processor`) and EU/EEA data residency boundaries.
-  * **`ads`:** Italian Data Protection (*Provvedimento Garante AdS*) governance tracking system administrators, immutable access log retention (`immutable-6-months` / `immutable-12-months`), formal appointment letters, and annual audit dates.
-
+  * **`ads`:** Italian Data Protection (*Provvedimento Garante AdS*) governance tracking system administrators, immutable access log retention (`immutable6-months` / `immutable12-months`), formal appointment letters, and annual audit dates.
 ---
 
 ### Docker Networks
@@ -388,7 +403,7 @@ project:
   name: "Fraud-Detection-Service"
   type: service
   lifecycle: active
-  tier: tier-1
+  tier: tier1                
   authentication:
     - mtls
     - jwt
@@ -397,10 +412,10 @@ project:
     - financial
   compliance:
     dora: cif-supported
-    ai_act: high-risk
+    aiact: high-risk         
     ads:
       responsibility: internal
-      logging: immutable-12-months
+      logging: immutable12-months
       nomination_executed: true
       latest_audit_date: "2026-02-10"
 
