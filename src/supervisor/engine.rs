@@ -233,10 +233,13 @@ impl Supervisor {
             UserAction::OpenLink(id) => {
                 if let Some(pane) = self.state.panes.iter().find(|p| p.id == id) {
                     if let Some(link) = pane.config.link.clone() {
-                        let url = if !link.starts_with("http://") && !link.starts_with("https://") {
+                        let url = if link.starts_with("http://") || link.starts_with("https://") {
+                            link
+                        } else if !link.contains("://") {
                             format!("https://{}", link)
                         } else {
-                            link
+                            // reject non-web URL schemes
+                            return;
                         };
                         let _ = open::that(&url);
                     }
