@@ -6,7 +6,7 @@ use std::io::Write;
 
 use schemars::generate::SchemaSettings;
 
-#[path = "src/config/schema.rs"]
+#[path = "src/schema/schema.rs"]
 mod schema;
 
 fn main() {

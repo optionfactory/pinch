@@ -1,4 +1,4 @@
-use crate::config::{LayoutBlock, PaneMode, PinchManifest};
+use crate::schema::{LayoutBlock, PaneMode, PinchManifest};
 use crate::runners::{RunBuilder, RunContext};
 use crate::vars::apply_vars;
 use crate::vars::builtin_vars;

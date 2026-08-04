@@ -1,6 +1,9 @@
+pub mod schema;
+
+#[cfg(feature = "supervisor")]
+pub mod config;
 #[cfg(feature = "supervisor")]
 pub mod cli;
-pub mod config;
 #[cfg(feature = "supervisor")]
 pub mod networks;
 #[cfg(feature = "supervisor")]
