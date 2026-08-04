@@ -1,5 +1,5 @@
-use crate::cli::{format_command_args, render_list, render_map, render_object, render_single};
-use crate::config::{OutputFormat, PinchManifest, ProjectManifest};
+use crate::cli::{OutputFormat, format_command_args, render_list, render_map, render_object, render_single};
+use crate::config::{PinchManifest, ProjectManifest};
 use crate::networks::build_docker_network_command;
 use crate::vars::apply_vars;
 use serde::Serialize;

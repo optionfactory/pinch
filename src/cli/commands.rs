@@ -1,4 +1,4 @@
-use crate::config::OutputFormat;
+use crate::cli::OutputFormat;
 use clap::{Parser, Subcommand, ValueEnum};
 use std::collections::HashMap;
 use std::fs::File;

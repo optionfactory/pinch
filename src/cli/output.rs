@@ -1,6 +1,15 @@
-use crate::config::OutputFormat;
 use serde::Serialize;
 use std::{collections::BTreeMap, fmt::Debug};
+
+use clap::ValueEnum;
+
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OutputFormat {
+    Yaml,
+    Raw,
+    Json,
+    Properties,
+}
 
 pub fn format_command_args(args: Vec<String>) -> String {
     args.into_iter()

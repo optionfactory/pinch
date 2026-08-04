@@ -1,13 +1,12 @@
-mod cli;
-mod config;
-mod networks;
-mod process;
-mod runners;
-mod supervisor;
-mod ui;
-mod vars;
-
-use crate::config::RunMode;
+// src/main.rs
+use pinch::cli::{
+    self, AuditCommand, CliAction, ConfigurationCommand, ContainerCommand, NetCommand, ProcessCommand, ProjectCommand,
+    Shell,
+};
+use pinch::config::{PinchManifest, RunMode};
+use pinch::networks;
+use pinch::process;
+use pinch::ui;
 use std::fs::File;
 use std::io::BufReader;
 use std::os::unix::process::CommandExt;
@@ -15,19 +14,19 @@ use std::os::unix::process::CommandExt;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let parsed = cli::parse_args();
     match &parsed.action {
-        cli::CliAction::Completion(shell) => {
+        CliAction::Completion(shell) => {
             use clap::CommandFactory;
             use clap_complete::{Shell as ClapShell, generate};
             let mut cmd = cli::Cli::command();
             let target_shell = match shell {
-                cli::Shell::Bash => ClapShell::Bash,
-                cli::Shell::Zsh => ClapShell::Zsh,
-                cli::Shell::Fish => ClapShell::Fish,
+                Shell::Bash => ClapShell::Bash,
+                Shell::Zsh => ClapShell::Zsh,
+                Shell::Fish => ClapShell::Fish,
             };
             generate(target_shell, &mut cmd, "pinch", &mut std::io::stdout());
             return Ok(());
         }
-        cli::CliAction::Configuration(cli::ConfigurationCommand::Init) => {
+        CliAction::Configuration(ConfigurationCommand::Init) => {
             cli::handle_init();
             return Ok(());
         }
@@ -36,50 +35,53 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config_path = &parsed.config_file;
     let file = File::open(config_path).map_err(|e| format!("Failed to open configuration '{}': {}", config_path, e))?;
     let reader = BufReader::new(file);
-    let raw_config: config::PinchManifest =
+    let raw_config: PinchManifest =
         serde_yaml::from_reader(reader).map_err(|e| format!("Failed to parse YAML config: {}", e))?;
     match parsed.action {
-        cli::CliAction::Project(cmd) => match cmd {
-            cli::ProjectCommand::Show { format } => {
+        CliAction::Project(cmd) => match cmd {
+            ProjectCommand::Show { format } => {
                 cli::show_project(&raw_config, format)?;
                 return Ok(());
             }
         },
-        cli::CliAction::Configuration(cmd) => match cmd {
-            cli::ConfigurationCommand::Show { format } => {
+        CliAction::Configuration(cmd) => match cmd {
+            ConfigurationCommand::Show { format } => {
                 cli::show_config(&raw_config, &parsed.vars, format)?;
                 return Ok(());
             }
-            cli::ConfigurationCommand::Var { name, format } => {
+            ConfigurationCommand::Var { name, format } => {
                 cli::show_vars(&raw_config, &parsed.vars, name.as_deref(), format)?;
                 return Ok(());
             }
-            cli::ConfigurationCommand::Init => unreachable!(),
+            ConfigurationCommand::Init => unreachable!(),
         },
-        cli::CliAction::Audit(cmd) => match cmd {
-            cli::AuditCommand::Show { format } => {
+        CliAction::Audit(cmd) => match cmd {
+            AuditCommand::Show { format } => {
                 cli::show_audit(&raw_config, &parsed.vars, format)?;
                 return Ok(());
             }
         },
-        cli::CliAction::Process(cmd) => match cmd {
-            cli::ProcessCommand::Ls { format } => {
+        CliAction::Process(cmd) => match cmd {
+            ProcessCommand::Ls { format } => {
                 cli::list_processes(&raw_config, format)?;
                 return Ok(());
             }
-            cli::ProcessCommand::Show { title, format } => {
+            ProcessCommand::Show { title, format } => {
                 cli::show_processes(&raw_config, &parsed.vars, title.as_deref(), format)?;
                 return Ok(());
             }
-            cli::ProcessCommand::Run { title, background } => {
+            ProcessCommand::Run { title, background } => {
                 let config = raw_config.prepare(parsed.vars.clone(), background)?;
                 networks::create_networks(&raw_config, &parsed.vars, None)?;
+
                 let proc = config
                     .processes
                     .iter()
                     .find(|p| p.title == title)
                     .ok_or_else(|| format!("Process with title '{}' not found in configuration", title))?;
+
                 let mut cmd = process::build_std_command(proc)?;
+
                 if proc.run_mode == RunMode::Spawn {
                     cmd.stdin(std::process::Stdio::null());
                     cmd.stdout(std::process::Stdio::null());
@@ -97,16 +99,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         },
-        cli::CliAction::Networks(cmd) => match cmd {
-            cli::NetCommand::Ls { format } => {
+        CliAction::Networks(cmd) => match cmd {
+            NetCommand::Ls { format } => {
                 cli::list_networks(&raw_config, format)?;
                 return Ok(());
             }
-            cli::NetCommand::Show { name, format } => {
+            NetCommand::Show { name, format } => {
                 cli::show_networks(&raw_config, &parsed.vars, name.as_deref(), format)?;
                 return Ok(());
             }
-            cli::NetCommand::Create { name } => {
+            NetCommand::Create { name } => {
                 networks::create_networks(&raw_config, &parsed.vars, name.as_deref())?;
                 if let Some(n) = name {
                     println!("Successfully created Docker network '{}'.", n);
@@ -116,19 +118,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
         },
-        cli::CliAction::Containers(cmd) => match cmd {
-            cli::ContainerCommand::Ls { format } => {
+        CliAction::Containers(cmd) => match cmd {
+            ContainerCommand::Ls { format } => {
                 cli::list_images(&raw_config, &parsed.vars, format)?;
                 return Ok(());
             }
         },
-        cli::CliAction::Tui => {
+        CliAction::Tui => {
             let config = raw_config.prepare(parsed.vars.clone(), false)?;
             networks::create_networks(&raw_config, &parsed.vars, None)?;
+
             let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
             rt.block_on(ui::tui::run_tui(config))?;
         }
-        cli::CliAction::Completion(_) => unreachable!(),
+        CliAction::Completion(_) => unreachable!(),
     }
+
     Ok(())
 }
