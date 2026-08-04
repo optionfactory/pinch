@@ -22,6 +22,7 @@ supervisor = [
     "dep:tokio",
     "dep:tui-term",
     "dep:vt100",
+    "dep:libc",
 ]
 
 [lib]
@@ -51,6 +52,7 @@ shlex = { version = "2.0.1", optional = true }
 tokio = { version = "1.53", features = ["full"], optional = true }
 tui-term = { version = "0.3", optional = true }
 vt100 = { version = "0.16.2", optional = true }
+libc = { version = "0.2", optional = true }
 
 
 [build-dependencies]

@@ -61,25 +61,28 @@ impl ProcessPane {
             let _ = writer.write_all(b"\x03");
             let _ = writer.flush();
         }
-        self.child_process.take().map(|mut child| {
-            tokio::spawn(async move {
-                let mut exited = false;
-                for _ in 0..30 {
-                    if let Ok(Some(_)) = child.try_wait() {
-                        exited = true;
-                        break;
+
+        let mut child = self.child_process.take()?;
+        Some(tokio::spawn(async move {
+            for _ in 0..30 {
+                if matches!(child.try_wait(), Ok(Some(_))) {
+                    return;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            }
+            let _ = tokio::task::spawn_blocking(move || {
+                if let Some(pid) = child.process_id().filter(|&p| p > 1) {
+                    // Kill entire process group (-pid) to clean up sub-processes and prevent orphans
+                    unsafe {
+                        libc::kill(-(pid as libc::pid_t), libc::SIGKILL);
                     }
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                } else {
+                    let _ = child.kill();
                 }
-                if !exited {
-                    let _ = tokio::task::spawn_blocking(move || {
-                        let _ = child.kill();
-                        let _ = child.wait();
-                    })
-                    .await;
-                }
+                let _ = child.wait();
             })
-        })
+            .await;
+        }))
     }
 
     pub fn add_line(&mut self, line: Line<'static>) {

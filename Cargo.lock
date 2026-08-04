@@ -1296,6 +1296,7 @@ dependencies = [
  "clap_complete",
  "crossterm",
  "futures",
+ "libc",
  "notify",
  "open",
  "portable-pty",
