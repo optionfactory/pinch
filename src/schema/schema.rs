@@ -740,6 +740,13 @@ pub struct LayoutSplit {
     pub unassigned: Option<bool>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct PinchAudit {
+    pub project: ProjectManifest,
+    pub containers: Vec<String>,
+}
+
+
 fn environments_schema(generator: &mut SchemaGenerator) -> Schema {
     let env_config_schema = generator.subschema_for::<EnvironmentConfig>();
 
@@ -781,3 +788,6 @@ fn iso_date_schema(_generator: &mut SchemaGenerator) -> Schema {
     });
     serde_json::from_value(schema_val).expect("valid schema")
 }
+
+
+

@@ -146,14 +146,9 @@ pub struct AuditReport<'a> {
 
 pub fn show_audit(
     manifest: &PinchManifest,
-    cli_vars: &HashMap<String, String>,
+    _cli_vars: &HashMap<String, String>,
     format: Option<OutputFormat>,
 ) -> Result<(), String> {
-    let context_vars = manifest.resolve_vars(cli_vars);
-    let containers = used_containers(manifest, &context_vars)?;
-    let report = AuditReport {
-        project: &manifest.project,
-        containers: containers.into_iter().collect(),
-    };
-    render_object(&report, format, OutputFormat::Json)
+    let audit_report = manifest.audit();
+    render_object(&audit_report, format, OutputFormat::Json)
 }
