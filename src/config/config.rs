@@ -1,5 +1,5 @@
-use crate::schema::{LayoutBlock, PaneMode, PinchManifest};
 use crate::runners::{RunBuilder, RunContext};
+use crate::schema::{LayoutBlock, PaneMode, PinchManifest};
 use crate::vars::apply_vars;
 use crate::vars::builtin_vars;
 use serde::Serialize;
@@ -46,6 +46,12 @@ impl PinchManifest {
     }
 
     pub fn prepare(&self, cli_vars: HashMap<String, String>, background: bool) -> Result<PinchConfig, String> {
+        if self.schema_version != 1 {
+            return Err(format!(
+                "Unsupported schema_version '{}'. Only version 1 is supported.",
+                self.schema_version
+            ));
+        }
         let context_vars = self.resolve_vars(&cli_vars);
         let title = self.project.name.clone();
         let global_shell = self.shell;

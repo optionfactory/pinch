@@ -49,6 +49,11 @@
       "description": "Core project metadata, governance attributes, and architecture classification.",
       "$ref": "#/$defs/ProjectManifest"
     },
+    "schema_version": {
+      "description": "Explicit schema version for manifest compatibility (must be 1).",
+      "type": "integer",
+      "const": 1
+    },
     "shell": {
       "description": "If true, executes shorthand command strings using `bash -c` globally (default: `false`).",
       "type": "boolean"
@@ -69,6 +74,7 @@
   },
   "additionalProperties": false,
   "required": [
+    "schema_version",
     "project"
   ],
   "$defs": {

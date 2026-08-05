@@ -6,6 +6,10 @@ use std::collections::{BTreeMap, HashMap};
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PinchManifest {
+#[doc = "Explicit schema version for manifest compatibility (must be 1)."]
+    #[schemars(schema_with = "schema_version_schema")]
+    pub schema_version: u32,
+
     #[doc = "Core project metadata, governance attributes, and architecture classification."]
     pub project: ProjectManifest,
 
@@ -789,5 +793,12 @@ fn iso_date_schema(_generator: &mut SchemaGenerator) -> Schema {
     serde_json::from_value(schema_val).expect("valid schema")
 }
 
-
+fn schema_version_schema(_generator: &mut SchemaGenerator) -> Schema {
+    let schema_val = serde_json::json!({
+        "type": "integer",
+        "const": 1,
+        "description": "Explicit schema version for manifest compatibility (must be 1)."
+    });
+    serde_json::from_value(schema_val).expect("valid schema")
+}
 
