@@ -167,15 +167,16 @@ pub fn handle_mouse(state: &mut DashboardState, mouse_event: MouseEvent) -> User
                 let Some(pane_idx) = state.panes.iter().position(|p| p.id == proc_id) else {
                     return UserAction::None;
                 };
-                state.focused_pane = pane_idx;
                 let inner_height = geo.area.height.saturating_sub(2) as usize;
                 let pane = &mut state.panes[pane_idx];
-
-                if pane.config.mode == PaneMode::Tui && !pane.tui_focused {
-                    pane.tui_focused = true;
-                }
                 match mouse_event.kind {
                     MouseEventKind::Down(MouseButton::Left) => {
+                        state.focused_pane = pane_idx;
+
+                        if pane.config.mode == PaneMode::Tui && !pane.tui_focused {
+                            pane.tui_focused = true;
+                        }
+
                         if my == geo.toggle_area.y {
                             if geo.toggle_area.hit(mx, my) {
                                 if pane.state == ProcessState::Running {
