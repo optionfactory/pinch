@@ -38,7 +38,7 @@ impl Supervisor {
             .map(|(id, cfg)| ProcessPane::new(id, config.logs_max_size, cfg.clone()))
             .collect();
         let state = DashboardState {
-            title: config.title,
+            name: config.name,
             panes,
             focused_pane: 0,
             zoomed_pane: None,

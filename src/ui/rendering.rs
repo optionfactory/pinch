@@ -68,7 +68,7 @@ fn draw_combined_logs(state: &DashboardState, frame: &mut Frame, area: Rect) {
     let max_name_len = state
         .panes
         .iter()
-        .map(|p| p.config.title.chars().count())
+        .map(|p| p.config.name.chars().count())
         .max()
         .unwrap_or(0);
 
@@ -83,7 +83,7 @@ fn draw_combined_logs(state: &DashboardState, frame: &mut Frame, area: Rect) {
             .panes
             .iter()
             .find(|p| p.id == *id)
-            .map(|p| p.config.title.as_str())
+            .map(|p| p.config.name.as_str())
             .unwrap_or("?");
 
         let tag_color = LOG_COLORS[id % LOG_COLORS.len()];
@@ -267,7 +267,7 @@ fn draw_process_grid(state: &DashboardState, frame: &mut Frame, _grid_area: Rect
 }
 
 fn draw_header(state: &DashboardState, frame: &mut Frame, area: Rect) {
-    let header_text = Paragraph::new(format!(" {} ", state.title)).style(
+    let header_text = Paragraph::new(format!(" {} ", state.name)).style(
         Style::default()
             .bg(COLOR_HEADER_BG)
             .fg(Color::White)

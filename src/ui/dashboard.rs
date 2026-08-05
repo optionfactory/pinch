@@ -6,7 +6,7 @@ use ratatui::text::Line;
 use std::collections::VecDeque;
 
 pub struct DashboardState {
-    pub title: String,
+    pub name: String,
     pub panes: Vec<ProcessPane>,
     pub focused_pane: usize,
     pub zoomed_pane: Option<usize>,

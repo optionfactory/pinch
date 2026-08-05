@@ -1,10 +1,10 @@
-pub mod vars;
 pub mod schema;
+pub mod vars;
 
 #[cfg(feature = "supervisor")]
-pub mod config;
-#[cfg(feature = "supervisor")]
 pub mod cli;
+#[cfg(feature = "supervisor")]
+pub mod config;
 #[cfg(feature = "supervisor")]
 pub mod networks;
 #[cfg(feature = "supervisor")]

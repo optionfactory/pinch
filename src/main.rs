@@ -66,19 +66,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 cli::list_processes(&raw_config, format)?;
                 return Ok(());
             }
-            ProcessCommand::Show { title, format } => {
-                cli::show_processes(&raw_config, &parsed.vars, title.as_deref(), format)?;
+            ProcessCommand::Show { name, format } => {
+                cli::show_processes(&raw_config, &parsed.vars, name.as_deref(), format)?;
                 return Ok(());
             }
-            ProcessCommand::Run { title, background } => {
+            ProcessCommand::Run { name, background } => {
                 let config = raw_config.prepare(parsed.vars.clone(), background)?;
                 networks::create_networks(&raw_config, &parsed.vars, None)?;
 
                 let proc = config
                     .processes
                     .iter()
-                    .find(|p| p.title == title)
-                    .ok_or_else(|| format!("Process with title '{}' not found in configuration", title))?;
+                    .find(|p| p.name == name)
+                    .ok_or_else(|| format!("Process with name '{}' not found in configuration", name))?;
 
                 let mut cmd = processes::build_std_command(proc)?;
 
@@ -88,7 +88,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     cmd.stderr(std::process::Stdio::null());
                     match cmd.spawn() {
                         Ok(child) => {
-                            println!("Started '{}' in the background (PID: {})", title, child.id());
+                            println!("Started '{}' in the background (PID: {})", name, child.id());
                             return Ok(());
                         }
                         Err(e) => return Err(format!("Failed to spawn background process: {}", e).into()),

@@ -112,7 +112,7 @@
       "description": "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance specification.",
       "type": "object",
       "properties": {
-        "latest_audit_date": {
+        "latest_audit": {
           "description": "Date when the last annual verification/audit was completed (ISO 8601 format: YYYY-MM-DD).",
           "type": "string",
           "format": "date"
@@ -121,7 +121,7 @@
           "description": "Immutable access log retention status (login/logout/failed attempts).",
           "$ref": "#/$defs/AdsLoggingStatus"
         },
-        "nomination_executed": {
+        "nominated": {
           "description": "Whether formal designation letters ('Lettera di Nomina') have been executed.",
           "type": "boolean"
         },
@@ -273,7 +273,7 @@
           "description": "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block.\n\n### Applicability Scope\nMandatory under **Italian data protection regulations (Provvedimento Garante Privacy 2008/2009)** whenever technical personnel or automated processes hold **privileged administrative access** over systems or databases containing personal data.",
           "$ref": "#/$defs/AdsManifest"
         },
-        "aiact": {
+        "ai_act": {
           "description": "EU AI Act risk classification tier.\n\n### Applicability Scope\nApplies whenever the project develops, deploys, or integrates **AI/ML models, LLMs, foundation models, or automated decision-making/inference engines**.",
           "$ref": "#/$defs/AiActClass"
         },
@@ -318,6 +318,26 @@
           "description": "Critical: Smartcards, hardware security modules, and core cryptographic hardware/software.",
           "type": "string",
           "const": "critical"
+        }
+      ]
+    },
+    "DataResidency": {
+      "description": "Geographic data storage and processing boundary for compliance.\n\nStoring or transferring personal data across any EEA country (e.g., hosting servers in Norway or Iceland instead of Germany)\nmeets standard EU data residency requirements without requiring special cross-border transfer safeguards like Standard Contractual Clauses (SCCs)",
+      "oneOf": [
+        {
+          "description": "Data is stored and processed strictly within European Union member states.",
+          "type": "string",
+          "const": "eu"
+        },
+        {
+          "description": "Data is stored and processed within the European Economic Area (EU + Iceland, Liechtenstein, Norway).",
+          "type": "string",
+          "const": "eea"
+        },
+        {
+          "description": "Data is stored or processed globally across international regions.",
+          "type": "string",
+          "const": "global"
         }
       ]
     },
@@ -381,7 +401,7 @@
         }
       ]
     },
-    "EnvironmentConfig": {
+    "EnvironmentManifest": {
       "description": "Environment-specific deployment configuration.",
       "type": "object",
       "properties": {
@@ -392,12 +412,103 @@
             "$ref": "#/$defs/DomainManagement"
           }
         },
-        "exposure": {
+        "ingress": {
           "description": "Network ingress reachability for this specific environment.",
           "$ref": "#/$defs/ExposureType"
+        },
+        "management": {
+          "description": "Network management reachability for this specific environment.",
+          "$ref": "#/$defs/ExposureType"
+        },
+        "name": {
+          "description": "Target deployment environment.",
+          "type": "string"
+        },
+        "type": {
+          "description": "Target deployment environment type.",
+          "$ref": "#/$defs/EnvironmentType"
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ]
+    },
+    "EnvironmentType": {
+      "description": "Supported deployment environment types.",
+      "oneOf": [
+        {
+          "description": "Local developer workstation or local machine loopback.",
+          "type": "string",
+          "const": "local"
+        },
+        {
+          "description": "Shared cloud or hosted development environment.",
+          "type": "string",
+          "const": "development"
+        },
+        {
+          "description": "Short-lived, dynamic per-PR or per-branch preview environment.",
+          "type": "string",
+          "const": "preview"
+        },
+        {
+          "description": "Automated CI/CD integration and unit testing environment.",
+          "type": "string",
+          "const": "testing"
+        },
+        {
+          "description": "Dedicated Quality Assurance and manual regression environment.",
+          "type": "string",
+          "const": "qa"
+        },
+        {
+          "description": "User Acceptance Testing environment for business stakeholder validation.",
+          "type": "string",
+          "const": "uat"
+        },
+        {
+          "description": "Isolated sandbox playground for external integrations and experimentation.",
+          "type": "string",
+          "const": "sandbox"
+        },
+        {
+          "description": "Near-exact production replica environment running parallel cutover validation (ambiente di parallelo).",
+          "type": "string",
+          "const": "pre-production"
+        },
+        {
+          "description": "Pre-production mirror environment for final release candidate acceptance.",
+          "type": "string",
+          "const": "staging"
+        },
+        {
+          "description": "Sales demo, customer sandbox, or product preview environment.",
+          "type": "string",
+          "const": "demo"
+        },
+        {
+          "description": "Dedicated load testing and performance benchmarking environment.",
+          "type": "string",
+          "const": "performance"
+        },
+        {
+          "description": "Dark-launch or traffic-mirrored environment receiving real-time production traffic passively.",
+          "type": "string",
+          "const": "shadow"
+        },
+        {
+          "description": "Live customer-facing production environment.",
+          "type": "string",
+          "const": "production"
+        },
+        {
+          "description": "Disaster recovery, warm standby, or secondary failover region.",
+          "type": "string",
+          "const": "disaster-recovery"
+        }
+      ]
     },
     "ExposureType": {
       "description": "Network ingress reachability for the project.",
@@ -418,6 +529,11 @@
           "const": "restricted-ip"
         },
         {
+          "description": "Reachable only through a Privileged Access Management (PAM) broker or session proxy (e.g., CyberArk, Teleport).",
+          "type": "string",
+          "const": "restricted-pam"
+        },
+        {
           "description": "Publicly reachable from the internet.",
           "type": "string",
           "const": "internet"
@@ -433,9 +549,9 @@
       "description": "General Data Protection Regulation (GDPR) architectural specification.",
       "type": "object",
       "properties": {
-        "eu_residency_only": {
+        "data_residency": {
           "description": "Whether personal data is processed or stored strictly within the EU/EEA.",
-          "type": "boolean"
+          "$ref": "#/$defs/DataResidency"
         },
         "role": {
           "description": "Our organization's legal role regarding personal data in this project.",
@@ -484,6 +600,10 @@
           "description": "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`).",
           "$ref": "#/$defs/LayoutEdge"
         },
+        "name": {
+          "description": "Target process name to place inside this block (or `\"Combined Logs\"`).",
+          "type": "string"
+        },
         "size_percentage": {
           "description": "Percentage of currently available space to allocate (0 to 100).",
           "type": "integer",
@@ -497,10 +617,6 @@
           "items": {
             "$ref": "#/$defs/LayoutSplit"
           }
-        },
-        "title": {
-          "description": "Target process title to place inside this block (or `\"Combined Logs\"`).",
-          "type": "string"
         },
         "unassigned": {
           "description": "If true, automatically places all unassigned process panes inside this block.",
@@ -550,16 +666,16 @@
       "description": "A sub-pane division within an edge-carved layout block.",
       "type": "object",
       "properties": {
-        "size_percentage": {
+        "name": {
+          "description": "Target process name to place inside this split (or `\"combined-logs\"`).",
+          "type": "string"
+        },
+        "size": {
           "description": "Percentage of space within the parent block to allocate (0 to 100).",
           "type": "integer",
           "format": "uint16",
           "maximum": 65535,
           "minimum": 0
-        },
-        "title": {
-          "description": "Target process title to place inside this split (or `\"Combined Logs\"`).",
-          "type": "string"
         },
         "unassigned": {
           "description": "If true, automatically places all unassigned process panes inside this split.",
@@ -568,7 +684,7 @@
       },
       "additionalProperties": false,
       "required": [
-        "size_percentage"
+        "size"
       ]
     },
     "LifecycleType": {
@@ -661,12 +777,16 @@
           "description": "Display mode for the process output in the TUI dashboard (`log` or `tui`).",
           "$ref": "#/$defs/PaneMode"
         },
+        "name": {
+          "description": "Name of the process.",
+          "type": "string"
+        },
         "run": {
           "description": "Execution definition specifying how the command or container is spawned.",
           "$ref": "#/$defs/RunManifest"
         },
         "title": {
-          "description": "Display name of the process pane in the TUI dashboard.",
+          "description": "Display name of the process pane in the TUI dashboard. (defaults to name)",
           "type": "string"
         },
         "watch": {
@@ -685,7 +805,7 @@
       },
       "additionalProperties": false,
       "required": [
-        "title",
+        "name",
         "run"
       ]
     },
@@ -705,122 +825,13 @@
         },
         "environments": {
           "description": "Environment-specific deployment configurations.",
-          "type": "object",
-          "properties": {
-            "demo": {
-              "description": "Sales demo, customer sandbox, or product preview environment.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "development": {
-              "description": "Shared cloud or hosted development environment.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "disaster-recovery": {
-              "description": "Disaster recovery, warm standby, or secondary failover region.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "local": {
-              "description": "Local developer workstation or local machine loopback.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "performance": {
-              "description": "Dedicated load testing and performance benchmarking environment.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "pre-production": {
-              "description": "Near-exact production replica environment running parallel cutover validation (ambiente di parallelo).",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "preview": {
-              "description": "Short-lived, dynamic per-PR or per-branch preview environment.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "production": {
-              "description": "Live customer-facing production environment.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "qa": {
-              "description": "Dedicated Quality Assurance and manual regression environment.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "sandbox": {
-              "description": "Isolated sandbox playground for external integrations and experimentation.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "shadow": {
-              "description": "Dark-launch or traffic-mirrored environment receiving real-time production traffic passively.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "staging": {
-              "description": "Pre-production mirror environment for final release candidate acceptance.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "testing": {
-              "description": "Automated CI/CD integration and unit testing environment.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            },
-            "uat": {
-              "description": "User Acceptance Testing environment for business stakeholder validation.",
-              "allOf": [
-                {
-                  "$ref": "#/$defs/EnvironmentConfig"
-                }
-              ]
-            }
-          },
-          "additionalProperties": false
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/EnvironmentManifest"
+          }
         },
         "lifecycle": {
           "$ref": "#/$defs/LifecycleType"

@@ -14,7 +14,7 @@ pub struct BuildOutput {
 pub type BuildResult = Result<BuildOutput, String>;
 
 pub struct RunContext<'a> {
-    pub title: &'a str,
+    pub name: &'a str,
     pub vars: &'a HashMap<String, String>,
     pub global_shell: Option<bool>,
     pub default_docker_network: Option<&'a String>,
@@ -51,10 +51,10 @@ impl RunBuilder for RunKind {
     }
 }
 
-pub fn parse_command_string(cmd: &str, bash: bool, title: &str) -> Result<Vec<String>, String> {
+pub fn parse_command_string(cmd: &str, bash: bool, name: &str) -> Result<Vec<String>, String> {
     if bash {
         Ok(vec!["bash".to_string(), "-c".to_string(), cmd.to_string()])
     } else {
-        shlex::split(cmd).ok_or_else(|| format!("Failed to parse command for '{}': {}", title, cmd))
+        shlex::split(cmd).ok_or_else(|| format!("Failed to parse command for '{}': {}", name, cmd))
     }
 }

@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, HashMap};
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PinchManifest {
-#[doc = "Explicit schema version for manifest compatibility (must be 1)."]
+    #[doc = "Explicit schema version for manifest compatibility (must be 1)."]
     #[schemars(schema_with = "schema_version_schema")]
     pub schema_version: u32,
 
@@ -98,8 +98,7 @@ pub struct ProjectManifest {
 
     #[doc = "Environment-specific deployment configurations."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(schema_with = "environments_schema")]
-    pub environments: Option<BTreeMap<EnvironmentType, EnvironmentConfig>>,
+    pub environments: Option<Vec<EnvironmentManifest>>,
 }
 
 #[doc = "Primary architectural role of the project."]
@@ -260,7 +259,7 @@ pub struct ComplianceManifest {
     #[doc = "Applies whenever the project develops, deploys, or integrates **AI/ML models, LLMs, foundation models, or automated decision-making/inference engines**."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AiActClass")]
-    pub aiact: Option<AiActClass>,
+    pub ai_act: Option<AiActClass>,
 
     #[doc = "GDPR data protection role and data residency boundaries."]
     #[doc = ""]
@@ -318,8 +317,24 @@ pub struct GdprManifest {
 
     #[doc = "Whether personal data is processed or stored strictly within the EU/EEA."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "bool")]
-    pub eu_residency_only: Option<bool>,
+    #[schemars(with = "DataResidency")]
+    pub data_residency: Option<DataResidency>,
+}
+
+#[doc = "Geographic data storage and processing boundary for compliance."]
+#[doc = ""]
+#[doc = "Storing or transferring personal data across any EEA country (e.g., hosting servers in Norway or Iceland instead of Germany)"]
+#[doc = "meets standard EU data residency requirements without requiring special cross-border transfer safeguards like Standard Contractual Clauses (SCCs)"]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum DataResidency {
+    #[doc = "Data is stored and processed strictly within European Union member states."]
+    Eu,
+    #[doc = "Data is stored and processed within the European Economic Area (EU + Iceland, Liechtenstein, Norway)."]
+    Eea,
+    #[doc = "Data is stored or processed globally across international regions."]
+    Global,
 }
 
 #[doc = "Legal processing role under GDPR (Art. 4)."]
@@ -382,12 +397,12 @@ pub struct AdsManifest {
     #[doc = "Whether formal designation letters ('Lettera di Nomina') have been executed."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
-    pub nomination_executed: Option<bool>,
+    pub nominated: Option<bool>,
 
     #[doc = "Date when the last annual verification/audit was completed (ISO 8601 format: YYYY-MM-DD)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(schema_with = "iso_date_schema")]
-    pub latest_audit_date: Option<String>,
+    pub latest_audit: Option<String>,
 }
 
 #[doc = "System Administrator (AdS) operational responsibility boundary."]
@@ -467,11 +482,23 @@ pub enum EnvironmentType {
 #[doc = "Environment-specific deployment configuration."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct EnvironmentConfig {
+pub struct EnvironmentManifest {
+    #[doc = "Target deployment environment."]
+    pub name: String,
+
+    #[doc = "Target deployment environment type."]
+    #[serde(rename = "type")]
+    pub environment_type: EnvironmentType,
+
     #[doc = "Network ingress reachability for this specific environment."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "ExposureType")]
-    pub exposure: Option<ExposureType>,
+    pub ingress: Option<ExposureType>,
+
+    #[doc = "Network management reachability for this specific environment."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "ExposureType")]
+    pub management: Option<ExposureType>,
 
     #[doc = "Map of domain names to their management origin (managed vs external)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -490,6 +517,8 @@ pub enum ExposureType {
     RestrictedVpn,
     #[doc = "Reachable from the internet but restricted by IP allowlisting or CIDR controls."]
     RestrictedIp,
+    #[doc = "Reachable only through a Privileged Access Management (PAM) broker or session proxy (e.g., CyberArk, Teleport)."]
+    RestrictedPam,
     #[doc = "Publicly reachable from the internet."]
     Internet,
     #[doc = "No incoming network traffic (e.g., background worker or CLI tool)."]
@@ -511,8 +540,13 @@ pub enum DomainManagement {
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProcessManifest {
-    #[doc = "Display name of the process pane in the TUI dashboard."]
-    pub title: String,
+    #[doc = "Name of the process."]
+    pub name: String,
+
+    #[doc = "Display name of the process pane in the TUI dashboard. (defaults to name)"]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
+    pub title: Option<String>,
 
     #[doc = "Execution definition specifying how the command or container is spawned."]
     pub run: RunManifest,
@@ -675,10 +709,10 @@ pub enum PaneMode {
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LayoutBlock {
-    #[doc = "Target process title to place inside this block (or `\"Combined Logs\"`)."]
+    #[doc = "Target process name to place inside this block (or `\"Combined Logs\"`)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
-    pub title: Option<String>,
+    pub name: Option<String>,
 
     #[doc = "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`)."]
     pub edge: LayoutEdge,
@@ -730,13 +764,13 @@ pub enum LayoutDirection {
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LayoutSplit {
-    #[doc = "Target process title to place inside this split (or `\"Combined Logs\"`)."]
+    #[doc = "Target process name to place inside this split (or `\"combined-logs\"`)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
-    pub title: Option<String>,
+    pub name: Option<String>,
 
     #[doc = "Percentage of space within the parent block to allocate (0 to 100)."]
-    pub size_percentage: u16,
+    pub size: u16,
 
     #[doc = "If true, automatically places all unassigned process panes inside this split."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -748,41 +782,6 @@ pub struct LayoutSplit {
 pub struct PinchAudit {
     pub project: ProjectManifest,
     pub containers: Vec<String>,
-}
-
-
-fn environments_schema(generator: &mut SchemaGenerator) -> Schema {
-    let env_config_schema = generator.subschema_for::<EnvironmentConfig>();
-
-    let env_type_schema = EnvironmentType::json_schema(generator);
-    let env_type_val = serde_json::to_value(&env_type_schema).unwrap_or_default();
-
-    let mut properties = serde_json::Map::new();
-
-    if let Some(one_of) = env_type_val.get("oneOf").and_then(|v| v.as_array()) {
-        for item in one_of {
-            if let Some(key) = item
-                .get("const")
-                .and_then(|k| k.as_str())
-                .or_else(|| item.get("enum").and_then(|e| e.get(0)).and_then(|k| k.as_str()))
-            {
-                let mut prop = serde_json::Map::new();
-
-                if let Some(desc) = item.get("description").and_then(|d| d.as_str()) {
-                    prop.insert("description".to_string(), serde_json::Value::String(desc.to_string()));
-                }
-                prop.insert("allOf".to_string(), serde_json::json!([env_config_schema]));
-                properties.insert(key.to_string(), serde_json::Value::Object(prop));
-            }
-        }
-    }
-
-    let schema_val = serde_json::json!({
-        "type": "object",
-        "properties": properties,
-        "additionalProperties": false
-    });
-    serde_json::from_value(schema_val).expect("valid schema")
 }
 
 fn iso_date_schema(_generator: &mut SchemaGenerator) -> Schema {
@@ -801,4 +800,3 @@ fn schema_version_schema(_generator: &mut SchemaGenerator) -> Schema {
     });
     serde_json::from_value(schema_val).expect("valid schema")
 }
-

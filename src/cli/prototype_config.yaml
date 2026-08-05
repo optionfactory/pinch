@@ -5,10 +5,10 @@ project:
 vars:
   env: "dev"
 processes:
-  - title: "Backend"
+  - name: "Backend"
     run: "cargo run"
     cwd: "{{pwd}}/backend"
-  - title: "Frontend"
+  - name: "Frontend"
     run: "npm run dev"
     cwd: "{{ pwd }}/frontend"
     mode: "tui"

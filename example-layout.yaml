@@ -3,38 +3,38 @@ schema_version: 1
 project:
    name: "An example dashboard"
 processes:
-  - title: "System Monitor"
+  - name: "system-monitor"
     run: "top"
     mode: "tui"
-  - title: "CPU & Mem Stats"
+  - name: "cpu-mem-stats"
     run: "vmstat 1"
-  - title: "Network Ping"
+  - name: "ping"
     run: "ping 8.8.8.8"
-  - title: "Disk Usage"
+  - name: "disk-usage"
     run: "watch -n 5 df -h"
     mode: "tui"
-  - title: "Simulated Service"
+  - name: "fake-job"
     run: "bash -c 'while true; do echo \"[Service] Processing task $RANDOM...\"; sleep 1.5; done'"
 layout:
   # 1. Carve out the left 35% of the screen.
   # Stack our primary system monitors vertically.
   - edge: "left"
-    size_percentage: 35
+    size: 35
     direction: "vertical"
     splits:
-      - title: "System Monitor"
-        size_percentage: 60
-      - title: "CPU & Mem Stats"
-        size_percentage: 40
+      - name: "system-monitor"
+        size: 60
+      - name: "cpu-mem-stats"
+        size: 40
   # 2. Carve out the bottom 30% of the REMAINING screen.
   # Display logs side-by-side.
   - edge: "bottom"
-    size_percentage: 30
+    size: 30
     direction: "horizontal"
     splits:
-      - title: "Combined Logs" # The special global logs panel
-        size_percentage: 50
-      - title: "Simulated Service" # Our bash loop generating fake logs
-        size_percentage: 50
+      - name: "combined-logs" # The special global logs panel
+        size: 50
+      - name: "fake-job" # Our bash loop generating fake logs
+        size: 50
   # 3. Unassigned Panes
-  # "Network Ping" and "Disk Usage" are not mentioned in the layout.
+  # "ping" and "disk-usage" are not mentioned in the layout.

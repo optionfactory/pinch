@@ -9,17 +9,17 @@ vars:
   flags: "-c 10"
 processes:
   # 1. Shorthand string execution (defaults to type: "process", bash: false, mode: "log")
-  - title: "Simple Ping"
+  - name: "simple-ping"
     run: "ping {{ target }} {{ flags }}"
   # 2. Local Process with TUI display mode
-  - title: "System Monitor"
+  - name: "system-monitor"
     mode: "tui"
     run:
       type: "process"
       bash: false
       cmd: "top"
   # 3. Docker container execution
-  - title: "Nginx Test"
+  - name: "nginx-test"
     run:
       type: "docker"
       image: "nginx:alpine"
@@ -29,7 +29,7 @@ processes:
         --ip 172.18.23.10
       args: "nginx -g 'daemon off;'"
   # 4. Namespace intrusion execution (defaults to the 'hi' network automatically)
-  - title: "Google DNS (Namespace)"
+  - name: "google-dns-in-namespace"
     link: "https://www.google.com"
     run:
       type: "docker-intrude"

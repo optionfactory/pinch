@@ -88,15 +88,15 @@ pub enum Commands {
 pub enum ProcessesSubcommand {
     #[command(about = "Run a process directly in the foreground or background")]
     Run {
-        #[arg(help = "Process title to execute")]
-        title: String,
+        #[arg(help = "Process name to execute")]
+        name: String,
         #[arg(short, long, help = "Run the process in the background")]
         background: bool,
     },
-    #[command(about = "Show the command associated with a process title (or all if omitted)")]
+    #[command(about = "Show the command associated with a process name (or all if omitted)")]
     Show {
-        #[arg(help = "Optional process title to display")]
-        title: Option<String>,
+        #[arg(help = "Optional process name to display")]
+        name: Option<String>,
         #[arg(
             short = 'f',
             long = "format",
@@ -105,7 +105,7 @@ pub enum ProcessesSubcommand {
         )]
         format: Option<OutputFormat>,
     },
-    #[command(about = "List all available process titles from the configuration")]
+    #[command(about = "List all available process names from the configuration")]
     Ls {
         #[arg(short = 'f', long = "format", help = "Output format (defaults to 'raw')", value_enum)]
         format: Option<OutputFormat>,
@@ -195,11 +195,11 @@ pub enum ProcessCommand {
         format: Option<OutputFormat>,
     },
     Show {
-        title: Option<String>,
+        name: Option<String>,
         format: Option<OutputFormat>,
     },
     Run {
-        title: String,
+        name: String,
         background: bool,
     },
 }
@@ -293,8 +293,8 @@ pub fn parse_args() -> ParsedCli {
         Some(Commands::Processes { command }) => {
             let cmd = match command {
                 ProcessesSubcommand::Ls { format } => ProcessCommand::Ls { format },
-                ProcessesSubcommand::Show { title, format } => ProcessCommand::Show { title, format },
-                ProcessesSubcommand::Run { title, background } => ProcessCommand::Run { title, background },
+                ProcessesSubcommand::Show { name, format } => ProcessCommand::Show { name, format },
+                ProcessesSubcommand::Run { name, background } => ProcessCommand::Run { name, background },
             };
             CliAction::Process(cmd)
         }

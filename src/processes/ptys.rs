@@ -12,7 +12,7 @@ pub struct PtyHandle {
 
 fn build_pty_command(cfg: &ProcessConfig) -> Result<CommandBuilder, String> {
     if cfg.cmd.is_empty() {
-        return Err(format!("Process command missing for: {}", cfg.title));
+        return Err(format!("Process command missing for: {}", cfg.name));
     }
     let mut cmd = CommandBuilder::new(&cfg.cmd[0]);
     if cfg.cmd.len() > 1 {

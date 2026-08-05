@@ -8,7 +8,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PinchConfig {
-    pub title: String,
+    pub name: String,
     pub processes: Vec<ProcessConfig>,
     pub logs_max_size: Option<usize>,
     pub layout: Vec<LayoutBlock>,
@@ -22,6 +22,7 @@ pub enum RunMode {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ProcessConfig {
+    pub name: String,
     pub title: String,
     pub cmd: Vec<String>,
     pub link: Option<String>,
@@ -53,7 +54,7 @@ impl PinchManifest {
             ));
         }
         let context_vars = self.resolve_vars(&cli_vars);
-        let title = self.project.name.clone();
+        let name = self.project.name.clone();
         let global_shell = self.shell;
         let global_auto_start = self.auto_start;
         let global_auto_restart = self.auto_restart;
@@ -82,7 +83,7 @@ impl PinchManifest {
                     }
                 }
                 let run_ctx = RunContext {
-                    title: &raw.title,
+                    name: &raw.name,
                     vars: &context_vars,
                     global_shell,
                     default_docker_network: default_docker_network.as_ref(),
@@ -93,7 +94,8 @@ impl PinchManifest {
                 let link = raw.link.as_ref().map(|l| apply_vars(l, &context_vars, false));
                 let watch_settle_time_ms = raw.watch_settle_time_ms.or(global_watch_settle).unwrap_or(800);
                 Ok(ProcessConfig {
-                    title: raw.title.clone(),
+                    name: raw.name.clone(),
+                    title: raw.title.clone().unwrap_or_else(|| raw.name.clone()),
                     cmd: built.cmd,
                     link,
                     cwd: final_cwd,
@@ -108,7 +110,7 @@ impl PinchManifest {
             })
             .collect();
         Ok(PinchConfig {
-            title,
+            name,
             processes: prepared_processes?,
             logs_max_size: global_logs_max_size,
             layout,

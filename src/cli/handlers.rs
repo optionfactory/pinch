@@ -6,14 +6,14 @@ use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 pub fn list_processes(manifest: &PinchManifest, format: Option<OutputFormat>) -> Result<(), String> {
-    let titles: Vec<String> = manifest
+    let names: Vec<String> = manifest
         .processes
         .as_deref()
         .unwrap_or(&[])
         .iter()
-        .map(|p| p.title.clone())
+        .map(|p| p.name.clone())
         .collect();
-    render_list(&titles, format)
+    render_list(&names, format)
 }
 
 pub fn show_vars(
@@ -55,19 +55,19 @@ pub fn show_processes(
     format: Option<OutputFormat>,
 ) -> Result<(), String> {
     let config = manifest.prepare(cli_vars.clone(), false)?;
-    if let Some(title) = target {
+    if let Some(name) = target {
         let proc = config
             .processes
             .iter()
-            .find(|p| p.title == title)
-            .ok_or_else(|| format!("Process with title '{}' not found in configuration", title))?;
+            .find(|p| p.name == name)
+            .ok_or_else(|| format!("Process with name '{}' not found in configuration", name))?;
         let cmd_str = proc.cmd.join(" ");
         render_single(&cmd_str, format)?;
     } else {
         let sorted: BTreeMap<String, String> = config
             .processes
             .iter()
-            .map(|p| (p.title.clone(), p.cmd.join(" ")))
+            .map(|p| (p.name.clone(), p.cmd.join(" ")))
             .collect();
         render_map(&sorted, format)?;
     }

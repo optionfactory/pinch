@@ -11,18 +11,18 @@ impl RunBuilder for crate::config::DockerIntrudeRunConfig {
             .ok_or_else(|| {
                 format!(
                     "Process '{}' has run type 'docker-intrude', but no 'network' is specified and there isn't exactly one network defined in 'docker_networks' to default to.",
-                    ctx.title
+                    ctx.name
                 )
             })?;
         let _net_config = ctx.defined_networks.get(network).ok_or_else(|| {
             format!(
                 "Process '{}' references docker network '{}' which is not defined in the root 'docker_networks' map.",
-                ctx.title, network
+                ctx.name, network
             )
         })?;
 
         let sanitized_title: String = ctx
-            .title
+            .name
             .replace('_', "-")
             .chars()
             .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
@@ -42,7 +42,7 @@ impl RunBuilder for crate::config::DockerIntrudeRunConfig {
             "--".to_string(),
         ];
         let expanded_cmd = apply_vars(self.cmd.trim(), ctx.vars, true);
-        let tokens = parse_command_string(&expanded_cmd, self.bash, ctx.title)?;
+        let tokens = parse_command_string(&expanded_cmd, self.bash, ctx.name)?;
         cmd_vec.extend(tokens);
 
         Ok(BuildOutput {

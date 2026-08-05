@@ -1,25 +1,20 @@
 # Pinch
+
 **The Executable Service Manifest & DevSecOps Supervisor**
 
-Pinch is a terminal-based process supervisor, developer workflow runner, and **declarative governance catalog**.
+Pinch is a terminal-based process supervisor, developer workflow runner, and declarative governance catalog. 
 
-Most software projects suffer from a fundamental disconnect between runtime execution and governance: traditional process runners know how to execute code but ignore ownership, data classification, and SLAs, while enterprise compliance portals capture regulatory metadata in disconnected silos that developers rarely visit after onboarding.
-
-Pinch solves this with an **executable service manifest** (`pinch.yaml`). The exact same file that supervises your local background daemons, Docker namespaces, and interactive TUI tasks also serves as your repository's authoritative code contract for operational tiers, data sensitivity, and regulatory applicability.
-
----
+Most software projects suffer from a fundamental disconnect between runtime execution and governance: traditional process runners know how to execute code but ignore ownership, data classification, and SLAs, while enterprise compliance portals capture regulatory metadata in disconnected silos that developers rarely visit after onboarding. Pinch solves this with an executable service manifest (`pinch.yaml`). The exact same file that supervises your local development background daemons, Docker namespaces, and interactive TUI tasks also serves as your repository's authoritative code contract for operational tiers, data sensitivity, and regulatory applicability.
 
 ## A Single Source of Truth for Cross-Functional Teams
 
 By uniting runtime supervision with **declarative governance**, Pinch creates a single source of truth that keeps three critical aspects of your software contract aligned without creating metadata rot:
 
-* **Local Execution & Workflows:** Zero-friction runtime supervision—managing multi-process TUIs, Docker namespaces, file watching, and log tailing in one terminal command (`pinch tui`).
+* **Local Execution & Workflows:** Zero-friction runtime supervision managing multi-process TUIs, Docker namespaces, file watching, and log tailing in one terminal command (`pinch tui`).
 * **Operational Standards & SLAs:** Explicit code contracts for service tiers (`tier-1` to `tier-4`), lifecycle status, environment exposures, and container dependencies enforced across repositories.
 * **Regulatory Governance & Tracking:** European and Italian compliance applicability (DORA, NIS2, CRA, EU AI Act, GDPR, Garante AdS) tracked alongside code and structurally validated in CI pipelines (`pinch audit`).
 
 Because `pinch.yaml` powers the daily development environment, architecture and governance metadata never go stale, if the manifest breaks, local development breaks.
-
----
 
 ## Zero-Config IDE Linting
 
@@ -28,8 +23,6 @@ To enable autocompletion, schema validation, and regulatory applicability toolti
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
 ```
-
----
 
 ## Security & Trust Model
 
@@ -47,13 +40,13 @@ A `pinch.yaml` manifest is explicitly designed to execute arbitrary shell comman
 When using `type: "docker"` or `type: "docker-intrude"`, Pinch passes configured flags (`opts`, `args`, `--privileged`, `--net=host`, etc.) directly to the Docker daemon. Pinch does not block or deny-list valid Docker flags, as local development and namespace inspection frequently require host-level access. Security boundaries for container execution must be enforced at the Docker daemon or OS level.
 
 ### 4. Scope of "Compliance-as-Code"
-The compliance and regulatory metadata blocks (`dora`, `cra`, `nis2`, `aiact`, `gdpr`, and `ads`) are authoritative **declarative governance records**. They allow cross-functional teams to assert operational SLAs and regulatory applicability directly alongside runtime definitions. `pinch audit` verifies structural validity and outputs structured reporting—it is not an automated static analysis engine that legally certifies software resilience or privacy compliance.
-
+The compliance and regulatory metadata blocks (`dora`, `cra`, `nis2`, `ai_act`, `gdpr`, and `ads`) are authoritative declarative governance records. 
+They allow cross-functional teams to assert operational SLAs and regulatory applicability directly alongside runtime definitions. 
+`pinch audit` verifies structural validity and outputs structured reporting it is not an automated static analysis engine that legally certifies software resilience or privacy compliance.
 
 ## Installation
 
 ### 1. Pre-built Binaries (Linux)
-
 Download the latest statically-linked musl executable directly from the GitHub Releases page, or install it via `curl`:
 
 ```bash
@@ -65,19 +58,14 @@ curl -sSL \
 
 > **Note:** Using processes configured with `type: "docker-intrude"` requires [`docker-intrude`](https://github.com/optionfactory/docker-intrude) to be installed and accessible in your system's `PATH`.
 
-
 ### 2. Build from Source
-
 Ensure you have the Rust toolchain installed, then clone the repository and build:
 
 ```bash
 git clone https://github.com/optionfactory/pinch
 cd pinch
-make build-release
-sudo make install
+make build-release install
 ```
-
----
 
 ## Usage Overview
 
@@ -112,20 +100,16 @@ pinch -c custom.yaml tui
 pinch -o env:staging -o target:10.0.0.1 tui
 ```
 
----
-
 ## CLI Command Reference
 
-You can interact with specific processes, inspect configuration variables, or manage Docker networks and images directly from your shell without launching the full TUI dashboard.
-
-**Commands can be abbreviated**
+You can interact with specific processes, inspect configuration variables, or manage Docker networks and images directly from your shell without launching the full TUI dashboard. **Commands can be abbreviated**
 
 ```text
 pinch
 ├── processes
-│   ├── ls (list)             List all available process titles
-│   ├── show [TITLE]          Show the command for a process (or all processes if omitted)
-│   └── run <TITLE> [-b]      Execute a process directly in foreground or background
+│   ├── ls (list)             List all available process names
+│   ├── show [NAME]           Show the command for a process (or all processes if omitted)
+│   └── run <NAME> [-b]       Execute a process directly in foreground or background
 ├── configuration
 │   ├── init                  Generate a default pinch.yaml file
 │   ├── show                  Print the parsed, variable-expanded configuration
@@ -144,9 +128,9 @@ pinch
 
 ### Process Management (`pinch proc`)
 
-* **`pinch processes ls [-f, --format <FORMAT>]`**: Lists all available process titles from the configuration.
-* **`pinch processes show [TITLE] [-f, --format <FORMAT>]`**: Prints the exact command associated with a process title. If `TITLE` is omitted, lists all processes in a map format.
-* **`pinch processes run <TITLE> [-b, --background]`**: Runs the command associated with the title directly in the foreground or background instead of launching the TUI.
+* **`pinch processes ls [-f, --format <FORMAT>]`**: Lists all available process names from the configuration.
+* **`pinch processes show [NAME] [-f, --format <FORMAT>]`**: Prints the exact command associated with a process name. If `NAME` is omitted, lists all processes in a map format.
+* **`pinch processes run <NAME> [-b, --background]`**: Runs the command associated with the name directly in the foreground or background instead of launching the TUI.
   * `-b, --background`: Spawns the process detached. For processes defined with `type: "docker"`, this automatically runs the container detached (`-d`) instead of interactive (`-ti`).
 
 ### Configuration Inspection (`pinch conf`)
@@ -179,11 +163,9 @@ pinch container ls | xargs -r -n1 docker pull
 * **`pinch completion <SHELL>`**: Supports `bash`, `zsh`, and `fish`.
 
 ```bash
-# Example: Load completions in Zsh
-source <(pinch completion zsh)
+# Example: Load completions in bash
+source <(pinch completion bash)
 ```
-
----
 
 ## Multi-Format Inspection (`-f, --format`)
 
@@ -202,7 +184,6 @@ The `process show`, `process ls`, `config show`, `config var`, `net show`, `net 
 > * **Structural commands** (`config show`, `project show`) default to **`yaml`**.
 > * **`audit`** defaults to **`json`**.
 
----
 
 ## Variable Overrides & Precedence
 
@@ -220,10 +201,8 @@ Variables defined as `{{var_name}}` inside your YAML file are resolved using a s
 pinch config var target
 
 # Override a variable on the fly
-pinch process run "Simple Ping" -o target:1.1.1.1 -o flags:"-c 4"
+pinch process run simple-ping -o target:1.1.1.1 -o flags:"-c 4"
 ```
-
----
 
 ## Keyboard Shortcuts
 
@@ -290,6 +269,7 @@ Configuration is defined in YAML. You can define global variables, default behav
 
 | Setting | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
+| `schema_version` | Integer | *Required* | Explicit manifest schema version (must be `1`). |
 | `project` | Object | *Required* | High-level project metadata (`name`, `type`, `tier`, `lifecycle`, `compliance`, `auth`). |
 | `vars` | Map | `{}` | Custom variables (e.g., `env: "dev"`). Built-ins: `{{pwd}}`, `{{user}}`, `{{home}}`. |
 | `logs_max_size` | Integer | *None* | Maximum number of log lines to retain in memory per pane. |
@@ -299,16 +279,15 @@ Configuration is defined in YAML. You can define global variables, default behav
 | `grace_period` | Integer | `3000` | Delay in milliseconds before auto-restarting a process. |
 | `watch_settle_time_ms` | Integer | `800` | Debounce delay in milliseconds when watching files for changes. |
 
----
-
 ### Project Metadata & Governance (`project:`)
 
 The `project` block defines ownership, operational SLAs, security posture, and regulatory compliance rules:
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
+schema_version: 1
 project:
-  name: "Customer Fraud AI Analyzer"
+  name: "Fraud AI Analyzer"
   type: service               # library | service | tool | job
   lifecycle: active           # active | maintenance | deprecated | prototype
   tier: tier1                 # tier1 (24/7 SLA) -> tier4 (experimental)
@@ -322,33 +301,37 @@ project:
     dora: cif-supported       # EU Digital Operational Resilience Act
     cra: important-class-2    # EU Cyber Resilience Act
     nis2: essential-entity    # EU NIS2 Critical Infrastructure
-    aiact: high-risk          # EU AI Act risk classification
+    ai_act: high-risk         # EU AI Act risk classification
     gdpr:
       role: processor
-      eu_residency_only: true
+      data_residency: eu
     ads:                      # Italian Garante Privacy 'Amministratore di Sistema'
       responsibility: internal
       logging: immutable-12-months
-      nomination_executed: true
-      latest_audit_date: "2026-02-10"
+      nominated: true
+      latest_audit: "2026-02-10"
   environments:
-    production:
-      exposure: restricted-ip
+    - name: "prod-eu"
+      type: production
+      ingress: restricted-ip
+      management: restricted-pam
       domains:
         api.internal.org: managed
 ```
 
 #### Governance & Regulatory Standards Covered
+
+* **Schema Version (`schema_version`):** Enforces explicit manifest structure versioning (must be `1`).
 * **Service Tiers (`tier`):** Maps internal operational priority (`tier1` critical path down to `tier4` prototype).
 * **Data Sensitivity (`sensitivity`):** Classifies assets handled by the project (`public`, `internal`, `confidential`, `restricted`, `pii`, `spi`, `biometric`, `pci`, `financial`, `phi`).
 * **European Regulatory Mappings (`compliance`):**
   * **`dora`:** Tracks whether the project supports a Critical or Important Function (`cif-supported` / `non-critical`) under EU financial resilience rules.
   * **`cra`:** Maps Cyber Resilience Act classes (`default`, `important-class1`, `important-class-2`, `critical`).
   * **`nis2`:** Non-financial critical infrastructure entities (`essential-entity`, `important-entity`, `out-of-scope`).
-  * **`aiact`:** Enforces EU AI Act risk classifications (`high-risk`, `general-purpose-ai`, `limited-risk`, `minimal-risk`).
-  * **`gdpr`:** Explicitly captures legal processing roles (`controller`, `processor`, `sub-processor`) and EU/EEA data residency boundaries.
-  * **`ads`:** Italian Data Protection (*Provvedimento Garante AdS*) governance tracking system administrators, immutable access log retention (`immutable6-months` / `immutable12-months`), formal appointment letters, and annual audit dates.
----
+  * **`ai_act`:** Enforces EU AI Act risk classifications (`high-risk`, `general-purpose-ai`, `limited-risk`, `minimal-risk`, `not-applicable`).
+  * **`gdpr`:** Explicitly captures legal processing roles (`controller`, `processor`, `sub-processor`) and geographic data residency boundaries (`eu`, `eea`, `global`).
+  * **`ads`:** Italian Data Protection (*Provvedimento Garante AdS*) governance tracking system administrators, immutable access log retention (`immutable-6-months` / `immutable-12-months`), formal appointment designation (`nominated: true`), and annual audit dates (`latest_audit: "YYYY-MM-DD"`).
+* **Environment Profiles (`environments`):** Structured list supporting named deployment environments with segregated network reachability (`ingress` and `management`), including PAM access brokers (`restricted-pam`).
 
 ### Docker Networks
 
@@ -358,7 +341,6 @@ You can define Docker networks in the `docker_networks` block at the root of you
 docker_networks:
   # Simple format (String maps to the subnet)
   simple_net_{{env}}: "172.18.0.1/24"
-
   # Detailed format (Object maps to subnet and custom args as a list)
   advanced_net:
     subnet: "172.19.0.1/24"
@@ -368,13 +350,11 @@ docker_networks:
       - "com.docker.network.bridge.enable_icc=false"
 ```
 
----
-
 ### Processes
 
 Each item under `processes` defines a process to supervise:
 
-* `title`: The display name of the process.
+* `name`: The name of the process.
 * `run`: How the process is executed. Supports shorthand strings or detailed objects:
   * **Shorthand (`string`)**: Runs a local command (defaults to `type: "process"`, `bash: false`).
   * **Process (`type: "process"`)**:
@@ -399,11 +379,12 @@ Each item under `processes` defines a process to supervise:
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
+schema_version: 1
 project:
   name: "Fraud-Detection-Service"
   type: service
   lifecycle: active
-  tier: tier1                
+  tier: tier1
   authentication:
     - mtls
     - jwt
@@ -412,30 +393,37 @@ project:
     - financial
   compliance:
     dora: cif-supported
-    aiact: high-risk         
+    ai_act: high-risk
+    gdpr:
+      role: processor
+      data_residency: eu
     ads:
       responsibility: internal
-      logging: immutable12-months
-      nomination_executed: true
-      latest_audit_date: "2026-02-10"
-
+      logging: immutable-12-months
+      nominated: true
+      latest_audit: "2026-02-10"
+  environments:
+    - name: "production"
+      type: production
+      ingress: restricted-ip
+      management: restricted-pam
+      domains:
+        api.internal.org: managed
 docker_networks:
   hi: "172.18.23.0/24"
-
 vars:
   target: "8.8.8.8"
   flags: "-c 10"
-
 processes:
-  - title: "Simple Ping"
+  - name: "simple-ping"
     run: "ping {{ target }} {{ flags }}"
-  - title: "System Monitor"
+  - name: "system-monitor"
     mode: "tui"
     run:
       type: "process"
       bash: false
       cmd: "top"
-  - title: "Nginx Test"
+  - name: "nginx"
     run:
       type: "docker"
       image: "nginx:alpine"
@@ -444,7 +432,7 @@ processes:
         --network hi
         --ip 172.18.23.10
       args: "nginx -g 'daemon off;'"
-  - title: "Google DNS (Namespace)"
+  - name: "google-ping"
     link: "https://www.google.com"
     run:
       type: "docker-intrude"
@@ -452,8 +440,6 @@ processes:
       network: "hi"
       cmd: "ping {{ target }} {{ flags }}"
 ```
-
----
 
 ## Layout Engine
 
@@ -466,8 +452,6 @@ Pinch uses a **progressive, edge-carving** layout system.
 3. **Sub-splitting:** A carved slice can be divided into sub-panes (`splits`) horizontally or vertically.
 4. **Unassigned Area:** Any process *not* explicitly placed in the layout automatically populates whatever space remains in the center (or gets routed to a block with `unassigned: true`).
 
----
-
 ### Visual Step-by-Step
 
 Given this configuration:
@@ -476,23 +460,21 @@ Given this configuration:
 layout:
   # Step 1: Carve 30% from the LEFT edge (split top/bottom)
   - edge: "left"
-    size_percentage: 30
+    size: 30
     direction: "vertical"
     splits:
-      - title: "System Monitor"
-        size_percentage: 50
-      - title: "CPU & Mem Stats"
-        size_percentage: 50
-
+      - name: "system-monitor"
+        size: 50
+      - name: "cpu-mem-stats"
+        size: 50
   # Step 2: Carve 25% from the BOTTOM edge of the REMAINING space
   - edge: "bottom"
-    size_percentage: 25
+    size: 25
     direction: "horizontal"
     splits:
-      - title: "Combined Logs"
-        size_percentage: 100
-
-  # Step 3: Unassigned processes ("Network Ping", "Disk Usage") fill the remaining center
+      - name: "combined-logs"
+        size: 100
+  # Step 3: Unassigned processes ("ping", "disk-usage") fill the remaining center
 ```
 
 #### Resulting Terminal Grid
@@ -515,53 +497,53 @@ layout:
 +-------------------+-----------------------------------+
 ```
 
----
-
 ### Layout Configuration Options
 
 * **`edge`**: Which side to carve from (`left`, `right`, `top`, `bottom`).
-* **`size_percentage`**: Percentage of the *currently available* screen space to carve out (0 to 100).
+* **`size`**: Percentage of the *currently available* screen space to carve out (0 to 100).
 * **`direction`**: Orientation for sub-splits (`horizontal` or `vertical`).
 * **`splits`**: An array of sub-panes inside this carved slice.
-  * **`title`**: Display title matching a process, or `"Combined Logs"` for the global log stream.
-  * **`size_percentage`**: Percentage of space within this slice allocated to the sub-pane.
+  * **`name`**: Name matching a process, or `"combined-logs"` for the global log stream.
+  * **`size`**: Percentage of space within this slice allocated to the sub-pane.
   * **`unassigned`**: (`true`/`false`) If set to `true`, routes all remaining unassigned processes into this sub-pane instead of the default center space.
-
----
 
 ### Full Layout Example
 
 ```yaml
+schema_version: 1
+
 project:
   name: "MyProject"
   type: service
+
 processes:
-  - title: "System Monitor"
+  - name: "system-monitor"
     run: "top"
     mode: "tui"
-  - title: "Backend API"
+  - name: "backend-api"
     run: "cargo run"
-  - title: "Frontend UI"
+  - name: "frontend-ui"
     run: "npm run dev"
-  - title: "Database"
+  - name: "database"
     run: "docker logs -f pg_db"
+
 layout:
-  # 1. Carve out 35% from the left edge, split into System Monitor and Database
+  # 1. Carve out 35% from the left edge, split into system-monitor and database
   - edge: "left"
-    size_percentage: 35
+    size: 35
     direction: "vertical"
     splits:
-      - title: "System Monitor"
-        size_percentage: 50
-      - title: "Database"
-        size_percentage: 50
+      - name: "system-monitor"
+        size: 50
+      - name: "database"
+        size: 50
   # 2. Carve out 30% from the bottom of the remaining screen for global logs and unassigned processes
   - edge: "bottom"
-    size_percentage: 30
+    size: 30
     direction: "horizontal"
     splits:
-      - title: "Combined Logs"
-        size_percentage: 50
+      - name: "combined-logs"
+        size: 50
       - unassigned: true # "Backend API" and "Frontend UI" are automatically placed side-by-side here
-        size_percentage: 50
+        size: 50
 ```

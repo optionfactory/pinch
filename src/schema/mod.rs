@@ -4,7 +4,6 @@ use std::collections::BTreeSet;
 
 pub use schema::*;
 
-
 impl PinchManifest {
     pub fn audit(&self) -> PinchAudit {
         let mut context_vars = crate::vars::builtin_vars();

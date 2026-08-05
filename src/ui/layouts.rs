@@ -97,10 +97,7 @@ pub fn compute_pane_geometries(
                 },
             };
 
-            let constraints: Vec<Constraint> = sub_splits
-                .iter()
-                .map(|s| Constraint::Percentage(s.size_percentage))
-                .collect();
+            let constraints: Vec<Constraint> = sub_splits.iter().map(|s| Constraint::Percentage(s.size)).collect();
 
             let sub_chunks = Layout::default()
                 .direction(split_direction)
@@ -118,14 +115,14 @@ pub fn compute_pane_geometries(
                     continue;
                 }
 
-                let target = if let Some(title) = &sub_item.title {
-                    if title == "Combined Logs" {
+                let target = if let Some(name) = &sub_item.name {
+                    if name == "combined-logs" {
                         if include_combined_logs {
                             continue;
                         }
                         include_combined_logs = true;
                         Some(PaneTarget::CombinedLogs)
-                    } else if let Some(pane) = panes.iter().find(|p| p.config.title == *title) {
+                    } else if let Some(pane) = panes.iter().find(|p| p.config.name == *name) {
                         if assigned_panes.contains(&pane.id) {
                             continue;
                         }
@@ -144,14 +141,14 @@ pub fn compute_pane_geometries(
             }
         } else if item.unassigned.unwrap_or(false) {
             unassigned_container = Some(carved_area);
-        } else if let Some(ref title) = item.title {
-            let target = if title == "Combined Logs" {
+        } else if let Some(ref title) = item.name {
+            let target = if title == "combined-logs" {
                 if include_combined_logs {
                     continue;
                 }
                 include_combined_logs = true;
                 Some(PaneTarget::CombinedLogs)
-            } else if let Some(pane) = panes.iter().find(|p| p.config.title == *title) {
+            } else if let Some(pane) = panes.iter().find(|p| p.config.name == *title) {
                 if assigned_panes.contains(&pane.id) {
                     continue;
                 }

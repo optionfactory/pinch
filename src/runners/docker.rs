@@ -18,7 +18,7 @@ impl RunBuilder for crate::config::DockerRunConfig {
         }
         let expanded_cmd = apply_vars(&cmd_str, ctx.vars, false);
         let tokens = shlex::split(&expanded_cmd)
-            .ok_or_else(|| format!("Failed to parse docker run command for '{}'", ctx.title))?;
+            .ok_or_else(|| format!("Failed to parse docker run command for '{}'", ctx.name))?;
 
         Ok(BuildOutput {
             cmd: tokens,
