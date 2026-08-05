@@ -884,6 +884,20 @@
             "$ref": "#/$defs/AuthType"
           }
         },
+        "channel": {
+          "description": "Channel partner, agency, or system integrator brokering the project relationship.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "commissioner": {
+          "description": "Company or legal entity that commissioned or paid for the project.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "compliance": {
           "description": "Regulatory compliance and resilience framework mappings.",
           "$ref": "#/$defs/ComplianceManifest"
@@ -908,6 +922,16 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/Sensitivity"
+          }
+        },
+        "stewards": {
+          "description": "Internal project stewards and domain experts to contact for reference and context.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
           }
         },
         "tier": {

@@ -106,6 +106,18 @@ pub struct ProjectManifest {
     #[schemars(with = "ComplianceManifest")]
     pub compliance: Option<ComplianceManifest>,
 
+    #[doc = "Internal project stewards and domain experts to contact for reference and context."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stewards: Option<Vec<String>>,
+
+    #[doc = "Company or legal entity that commissioned or paid for the project."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commissioner: Option<String>,
+
+    #[doc = "Channel partner, agency, or system integrator brokering the project relationship."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub channel: Option<String>,
+
     #[doc = "Environment-specific deployment configurations."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub environments: Option<Vec<EnvironmentManifest>>,
