@@ -286,13 +286,13 @@ The `project` block defines ownership, operational SLAs, security posture, and r
 schema_version: 1
 project:
   name: "Fraud AI Analyzer"
-  stewards:
-    - "mario.rossi@company.com"
-  commissioner: "Acme Financial Services SpA"
-  channel: "Global Enterprise Integrators Srl"
   type: service               # library | service | tool | job | infrastructure
   lifecycle: active           # active | maintenance | deprecated | end-of-life | prototype
   tier: tier1                 # tier1 (24/7 SLA) -> tier4 (experimental)
+  commissioner: "Acme Financial Services SpA"
+  channel: "Global Enterprise Integrators Srl"
+  stewards:
+    - "mario.rossi@example.com"
   authentication:
     - jwt
     - mtls
@@ -355,3 +355,210 @@ docker_networks:
     args: >
       --ipv6
       --opt com.docker.network.bridge.enable_icc=false
+```
+
+### Processes
+
+Each item under `processes` defines a process to supervise:
+* `name`: The name of the process.
+* `run`: How the process is executed. Supports shorthand strings or detailed objects:
+  * **Shorthand (`string`)**: Runs a local command (defaults to `type: "process"`).
+  * **Process (`type: "process"`)**:
+    * `cmd`: The command string to execute.
+    * `shell`: Optional shell override (`bash`, `zsh`, `fish`). Runs the command using `shell -c`.
+  * **Docker (`type: "docker"`)**:
+    * `image`: The Docker image to run.
+    * `opts`: Arguments passed to `docker run --rm` (`--name`, `--network`, `--ip`, etc.).
+    * `args`: Arguments passed to the container entrypoint.
+  * **Docker Intrude (`type: "docker-intrude"`)**:
+    * `ip`: The target IP address in the network namespace.
+    * `network`: (Optional if only one network is defined in `docker_networks`) The Docker network name.
+    * `cmd`: The command to execute inside the namespace.
+    * `shell`: Optional shell override (`bash`, `zsh`, `fish`). Runs the command using `shell -c`.
+* `mode`: Either `log` (default) or `tui` (allocates a PTY for interactive terminal apps).
+* `cwd`: Working directory (supports variables like `{{pwd}}`).
+* `link`: An optional web URL or link associated with this process.
+* `watch`: A list of file paths. If these files change, the process restarts automatically.
+* `auto_start`, `auto_restart`, `grace_period`, `watch_settle_time_ms`: Overrides global defaults for this specific process.
+
+#### Full Example Configuration
+
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
+schema_version: 1
+
+project:
+  name: "Fraud-Detection-Service"
+  type: service
+  lifecycle: active
+  tier: tier1
+  commissioner: "Acme Financial Services SpA"
+  channel: "Global Enterprise Integrators Srl"
+  stewards:
+    - "mario.rossi@company.com"
+  authentication:
+    - mtls
+    - jwt
+    - passkey
+  sensitivity:
+    - pii
+    - financial
+  compliance:
+    dora: cif-supported
+    ai_act: high-risk
+    gdpr:
+      role: processor
+      data_residency: eu
+    ads:
+      responsibility: internal
+      logging: immutable-12-months
+      nominated: true
+      latest_audit: "2026-02-10"
+  environments:
+    - name: "production"
+      type: production
+      platform: cloud
+      ownership:
+        - services
+        - applications
+      ingress: restricted-ip
+      management: restricted-pam
+      domains:
+        api.internal.org: managed
+docker_networks:
+  hi: "172.18.23.0/24"
+vars:
+  target: "8.8.8.8"
+  flags: "-c 10"
+processes:
+  - name: "simple-ping"
+    run: "ping {{ target }} {{ flags }}"
+  - name: "system-monitor"
+    mode: "tui"
+    run:
+      type: "process"
+      cmd: "top"
+  - name: "nginx"
+    run:
+      type: "docker"
+      image: "nginx:alpine"
+      opts: >
+        --name hi-nginx
+        --network hi
+        --ip 172.18.23.10
+      args: "nginx -g 'daemon off;'"
+  - name: "google-ping"
+    link: "https://www.google.com"
+    run:
+      type: "docker-intrude"
+      ip: "172.18.23.100"
+      network: "hi"
+      cmd: "ping {{ target }} {{ flags }}"
+```
+
+## Layout Engine
+
+Pinch uses a **progressive, edge-carving** layout system.
+
+### How Edge-Carving Works
+
+1. **The Starting Canvas:** Pinch begins with a single full-screen rectangle (`100% width x 100% height`).
+2. **Sequential Carving:** Each block defined in your `layout` array carves out a slice from one of the outer edges (`left`, `right`, `top`, or `bottom`) of the *currently remaining* screen space.
+3. **Sub-splitting:** A carved slice can be divided into sub-panes (`splits`) horizontally or vertically.
+4. **Unassigned Area:** Any process *not* explicitly placed in the layout automatically populates whatever space remains in the center (or gets routed to a block with `unassigned: true`).
+
+### Visual Step-by-Step
+
+Given this configuration:
+
+```yaml
+layout:
+  # Step 1: Carve 30% from the LEFT edge (split top/bottom)
+  - edge: "left"
+    size: 30
+    direction: "vertical"
+    splits:
+      - name: "system-monitor"
+        size: 50
+      - name: "cpu-mem-stats"
+        size: 50
+
+  # Step 2: Carve 25% from the BOTTOM edge of the REMAINING space
+  - edge: "bottom"
+    size: 25
+    direction: "horizontal"
+    splits:
+      - name: "combined-logs"
+        size: 100
+
+  # Step 3: Unassigned processes ("ping", "disk-usage") fill the remaining center
+```
+
+#### Resulting Terminal Grid
+
+```text
++-------------------+-----------------------------------+
+|                   |                                   |
+|  System Monitor   |            Network Ping           |
+| (30% left / top)  |         (Unassigned Center)       |
+|                   |                                   |
+|                   |-----------------------------------|
+|                   |                                   |
+|-------------------|             Disk Usage            |
+|                   |         (Unassigned Center)       |
+|  CPU & Mem Stats  |                                   |
+| (30% left / btm)  |-----------------------------------|
+|                   |            Combined Logs          |
+|                   |   (25% bottom of remaining space) |
+|                   |                                   |
++-------------------+-----------------------------------+
+```
+
+### Layout Configuration Options
+
+* **`edge`**: Which side to carve from (`left`, `right`, `top`, `bottom`).
+* **`size`**: Percentage of the *currently available* screen space to carve out (0 to 100).
+* **`direction`**: Orientation for sub-splits (`horizontal` or `vertical`).
+* **`splits`**: An array of sub-panes inside this carved slice.
+  * **`name`**: Name matching a process, or `"combined-logs"` for the global log stream.
+  * **`size`**: Percentage of space within this slice allocated to the sub-pane.
+  * **`unassigned`**: (`true`/`false`) If set to `true`, routes all remaining unassigned processes into this sub-pane instead of the default center space.
+
+### Full Layout Example
+
+```yaml
+schema_version: 1
+
+project:
+  name: "MyProject"
+  type: service
+processes:
+  - name: "system-monitor"
+    run: "top"
+    mode: "tui"
+  - name: "backend-api"
+    run: "cargo run"
+  - name: "frontend-ui"
+    run: "npm run dev"
+  - name: "database"
+    run: "docker logs -f pg_db"
+layout:
+  # 1. Carve out 35% from the left edge, split into system-monitor and database
+  - edge: "left"
+    size: 35
+    direction: "vertical"
+    splits:
+      - name: "system-monitor"
+        size: 50
+      - name: "database"
+        size: 50
+  # 2. Carve out 30% from the bottom of the remaining screen for global logs and unassigned processes
+  - edge: "bottom"
+    size: 30
+    direction: "horizontal"
+    splits:
+      - name: "combined-logs"
+        size: 50
+      - unassigned: true # "Backend API" and "Frontend UI" are automatically placed side-by-side here
+        size: 50
+```
