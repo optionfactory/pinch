@@ -563,6 +563,14 @@ pub enum EnvironmentType {
 pub enum PlatformType {
     #[doc = "Hosted in public or private cloud infrastructure."]
     Cloud,
+    #[doc = "Hosted using the AWS cloud provider."]
+    CloudAws,
+    #[doc = "Hosted using the Azure cloud provider."]
+    CloudAzure,
+    #[doc = "Hosted using the Google Cloud Platform provider."]
+    CloudGcp,
+    #[doc = "Hosted using the Hetzner cloud provider."]
+    CloudHetzner,
     #[doc = "Hosted in traditional third-party non-cloud server farms or hosting datacenters."]
     Datacenter,
     #[doc = "Hosted in self-managed physical on-premises datacenters."]
@@ -574,7 +582,7 @@ pub enum PlatformType {
     #[doc = "Edge deployment located on customer premises, IoT devices, or remote nodes."]
     Edge,
     #[doc = "Private developer network"]
-    DevNetwork
+    DevNetwork,
 }
 
 #[doc = "Architectural stack layer managed directly by our organization."]

@@ -11,7 +11,7 @@ Most software projects suffer from a fundamental disconnect between runtime exec
 By uniting runtime supervision with **declarative governance**, Pinch creates a single source of truth that keeps three critical aspects of your software contract aligned without creating metadata rot:
 
 * **Local Execution & Workflows:** Zero-friction runtime supervision managing multi-process TUIs, Docker namespaces, file watching, and log tailing in one terminal command (`pinch tui`).
-* **Operational Standards & SLAs:** Explicit code contracts for service tiers (`tier-1` to `tier-4`), lifecycle status, environment exposures, and container dependencies enforced across repositories.
+* **Operational Standards & SLAs:** Explicit code contracts for service tiers (`tier1` to `tier4`), lifecycle status, environment exposures, and container dependencies enforced across repositories.
 * **Regulatory Governance & Tracking:** European and Italian compliance applicability (DORA, NIS2, CRA, EU AI Act, GDPR, Garante AdS) tracked alongside code and structurally validated in CI pipelines (`pinch audit`).
 
 Because `pinch.yaml` powers the daily development environment, architecture and governance metadata never go stale, if the manifest breaks, local development breaks.

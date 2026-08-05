@@ -836,6 +836,26 @@
           "const": "cloud"
         },
         {
+          "description": "Hosted using the AWS cloud provider.",
+          "type": "string",
+          "const": "cloud-aws"
+        },
+        {
+          "description": "Hosted using the Azure cloud provider.",
+          "type": "string",
+          "const": "cloud-azure"
+        },
+        {
+          "description": "Hosted using the Google Cloud Platform provider.",
+          "type": "string",
+          "const": "cloud-gcp"
+        },
+        {
+          "description": "Hosted using the Hetzner cloud provider.",
+          "type": "string",
+          "const": "cloud-hetzner"
+        },
+        {
           "description": "Hosted in traditional third-party non-cloud server farms or hosting datacenters.",
           "type": "string",
           "const": "datacenter"
