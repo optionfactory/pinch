@@ -422,7 +422,8 @@
         },
         "name": {
           "description": "Target deployment environment.",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-_]+$"
         },
         "type": {
           "description": "Target deployment environment type.",
@@ -602,7 +603,8 @@
         },
         "name": {
           "description": "Target process name to place inside this block (or `\"Combined Logs\"`).",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-_]+$"
         },
         "size_percentage": {
           "description": "Percentage of currently available space to allocate (0 to 100).",
@@ -668,7 +670,8 @@
       "properties": {
         "name": {
           "description": "Target process name to place inside this split (or `\"combined-logs\"`).",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-_]+$"
         },
         "size": {
           "description": "Percentage of space within the parent block to allocate (0 to 100).",
@@ -779,7 +782,8 @@
         },
         "name": {
           "description": "Name of the process.",
-          "type": "string"
+          "type": "string",
+          "pattern": "^[A-Za-z0-9-_]+$"
         },
         "run": {
           "description": "Execution definition specifying how the command or container is spawned.",

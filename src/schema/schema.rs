@@ -484,6 +484,7 @@ pub enum EnvironmentType {
 #[serde(deny_unknown_fields)]
 pub struct EnvironmentManifest {
     #[doc = "Target deployment environment."]
+    #[schemars(schema_with = "identifier_schema")]    
     pub name: String,
 
     #[doc = "Target deployment environment type."]
@@ -541,6 +542,7 @@ pub enum DomainManagement {
 #[serde(deny_unknown_fields)]
 pub struct ProcessManifest {
     #[doc = "Name of the process."]
+    #[schemars(schema_with = "identifier_schema")]    
     pub name: String,
 
     #[doc = "Display name of the process pane in the TUI dashboard. (defaults to name)"]
@@ -711,7 +713,7 @@ pub enum PaneMode {
 pub struct LayoutBlock {
     #[doc = "Target process name to place inside this block (or `\"Combined Logs\"`)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "String")]
+    #[schemars(schema_with = "identifier_schema")]
     pub name: Option<String>,
 
     #[doc = "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`)."]
@@ -766,7 +768,7 @@ pub enum LayoutDirection {
 pub struct LayoutSplit {
     #[doc = "Target process name to place inside this split (or `\"combined-logs\"`)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "String")]
+    #[schemars(schema_with = "identifier_schema")]
     pub name: Option<String>,
 
     #[doc = "Percentage of space within the parent block to allocate (0 to 100)."]
@@ -797,6 +799,15 @@ fn schema_version_schema(_generator: &mut SchemaGenerator) -> Schema {
         "type": "integer",
         "const": 1,
         "description": "Explicit schema version for manifest compatibility (must be 1)."
+    });
+    serde_json::from_value(schema_val).expect("valid schema")
+}
+
+fn identifier_schema(_generator: &mut SchemaGenerator) -> Schema {
+    let schema_val = serde_json::json!({
+        "type": "string",
+        "pattern": "^[A-Za-z0-9-_]+$",
+        "description": "A valid identifier."
     });
     serde_json::from_value(schema_val).expect("valid schema")
 }
