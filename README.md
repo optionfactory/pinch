@@ -322,8 +322,11 @@ project:
         - applications
       ingress: restricted-ip
       management: restricted-pam
+      dns: managed # managed | external
       domains:
-        api.internal.org: managed
+        - api.internal.org
+        - app.internal.org
+      certificates: managed-acme-dns01 # managed-acme-dns01 | managed-acme-http01 | managed-auto-renew | managed-manual | third-party-provided | third-party-managed | not-applicable
 ```
 
 #### Governance & Regulatory Standards Covered
@@ -339,7 +342,7 @@ project:
   * **`ai_act`:** Enforces EU AI Act risk classifications (`high-risk`, `general-purpose-ai`, `limited-risk`, `minimal-risk`, `not-applicable`).
   * **`gdpr`:** Explicitly captures legal processing roles (`controller`, `processor`, `sub-processor`) and geographic data residency boundaries (`eu`, `eea`, `global`).
   * **`ads`:** Italian Data Protection (*Provvedimento Garante AdS*) governance tracking system administrators, immutable access log retention (`immutable-6-months` / `immutable-12-months`), formal appointment designation (`nominated: true`), and annual audit dates (`latest_audit: "YYYY-MM-DD"`).
-* **Environment Profiles (`environments`):** Structured list supporting named deployment environments, hosting platforms (`platform`), stack layer boundaries (`ownership`), and segregated network reachability (`ingress` and `management`, including PAM access brokers).
+* **Environment Profiles (`environments`):** Structured list supporting named deployment environments, hosting platforms (`platform`), stack layer boundaries (`ownership`), domain ownership (`dns`), assigned hostnames (`domains`), TLS certificate lifecycle controls (`certificates`), and segregated network reachability (`ingress` and `management`).
 
 ### Docker Networks
 
@@ -386,7 +389,6 @@ Each item under `processes` defines a process to supervise:
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
 schema_version: 1
-
 project:
   name: "Fraud-Detection-Service"
   type: service
@@ -423,8 +425,10 @@ project:
         - applications
       ingress: restricted-ip
       management: restricted-pam
+      dns: managed
+      certificates: managed-acme-dns01
       domains:
-        api.internal.org: managed
+        - api.internal.org
 docker_networks:
   hi: "172.18.23.0/24"
 vars:

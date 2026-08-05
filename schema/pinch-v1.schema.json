@@ -275,6 +275,46 @@
         }
       ]
     },
+    "CertManagement": {
+      "description": "TLS certificate provisioning and renewal mechanism.",
+      "oneOf": [
+        {
+          "description": "Managed directly by us with auto-renewal via ACME DNS-01 challenge.",
+          "type": "string",
+          "const": "managed-acme-dns01"
+        },
+        {
+          "description": "Managed directly by us with auto-renewal via ACME HTTP-01 challenge.",
+          "type": "string",
+          "const": "managed-acme-http01"
+        },
+        {
+          "description": "Managed directly by us with generic automated renewal.",
+          "type": "string",
+          "const": "managed-auto-renew"
+        },
+        {
+          "description": "Managed directly by us manually without automated renewal.",
+          "type": "string",
+          "const": "managed-manual"
+        },
+        {
+          "description": "Certificates provided by third parties.",
+          "type": "string",
+          "const": "third-party-provided"
+        },
+        {
+          "description": "Certificates fully managed and hosted by third parties.",
+          "type": "string",
+          "const": "third-party-managed"
+        },
+        {
+          "description": "TLS certificates not applicable.",
+          "type": "string",
+          "const": "not-applicable"
+        }
+      ]
+    },
     "ComplianceManifest": {
       "description": "Regulatory compliance and cybersecurity resilience specifications.\n\n### Framework Applicability Guide\n* **`dora`:** EU financial sector & ICT third-party providers to finance.\n* **`cra`:** Software products with digital elements sold/distributed in the EU.\n* **`nis2`:** Critical/important non-financial infrastructure (energy, health, SaaS, MSPs).\n* **`aiact`:** Systems integrating AI/ML models, LLMs, or automated inference.\n* **`gdpr`:** Any project processing, storing, or transmitting EU/EEA personal data.\n* **`ads`:** Italian Garante Privacy governance for privileged IT/database administrators.",
       "type": "object",
@@ -351,6 +391,21 @@
         }
       ]
     },
+    "DnsManagement": {
+      "description": "Domain management and ownership origin.",
+      "oneOf": [
+        {
+          "description": "Managed directly by our infrastructure / DNS.",
+          "type": "string",
+          "const": "managed"
+        },
+        {
+          "description": "Managed externally by a client, partner, or third party.",
+          "type": "string",
+          "const": "external"
+        }
+      ]
+    },
     "DockerNetworkConfig": {
       "description": "Configuration for creating a Docker bridge network.",
       "anyOf": [
@@ -381,21 +436,6 @@
         }
       ]
     },
-    "DomainManagement": {
-      "description": "Domain management and ownership origin.",
-      "oneOf": [
-        {
-          "description": "Managed directly by our infrastructure / DNS / CDN rules.",
-          "type": "string",
-          "const": "managed"
-        },
-        {
-          "description": "Managed externally by a client, partner, or third party.",
-          "type": "string",
-          "const": "external"
-        }
-      ]
-    },
     "DoraCriticality": {
       "description": "DORA (Digital Operational Resilience Act) operational criticality tag.",
       "oneOf": [
@@ -415,11 +455,22 @@
       "description": "Environment-specific deployment configuration.",
       "type": "object",
       "properties": {
+        "certificates": {
+          "description": "TLS certificate provisioning and renewal mechanism.",
+          "$ref": "#/$defs/CertManagement"
+        },
+        "dns": {
+          "description": "DNS management and ownership origin.",
+          "$ref": "#/$defs/DnsManagement"
+        },
         "domains": {
-          "description": "Map of domain names to their management origin (managed vs external).",
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/$defs/DomainManagement"
+          "description": "List of domain names assigned to this environment.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
           }
         },
         "ingress": {

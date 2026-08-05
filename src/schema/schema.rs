@@ -1,6 +1,6 @@
 use schemars::{JsonSchema, Schema, SchemaGenerator};
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 #[doc = "Root configuration manifest for a Pinch project (`pinch.yaml`)."]
 #[derive(Debug, Deserialize, Serialize, JsonSchema)]
@@ -506,10 +506,19 @@ pub struct EnvironmentManifest {
     #[schemars(with = "ExposureType")]
     pub management: Option<ExposureType>,
 
-    #[doc = "Map of domain names to their management origin (managed vs external)."]
+    #[doc = "DNS management and ownership origin."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "BTreeMap<String, DomainManagement>")]
-    pub domains: Option<BTreeMap<String, DomainManagement>>,
+    #[schemars(with = "DnsManagement")]
+    pub dns: Option<DnsManagement>,
+
+    #[doc = "List of domain names assigned to this environment."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub domains: Option<Vec<String>>,
+
+    #[doc = "TLS certificate provisioning and renewal mechanism."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "CertManagement")]
+    pub certificates: Option<CertManagement>,
 }
 
 #[doc = "Supported deployment environment types."]
@@ -604,11 +613,32 @@ pub enum ExposureType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
-pub enum DomainManagement {
-    #[doc = "Managed directly by our infrastructure / DNS / CDN rules."]
+pub enum DnsManagement {
+    #[doc = "Managed directly by our infrastructure / DNS."]
     Managed,
     #[doc = "Managed externally by a client, partner, or third party."]
     External,
+}
+
+#[doc = "TLS certificate provisioning and renewal mechanism."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum CertManagement {
+    #[doc = "Managed directly by us with auto-renewal via ACME DNS-01 challenge."]
+    ManagedAcmeDns01,
+    #[doc = "Managed directly by us with auto-renewal via ACME HTTP-01 challenge."]
+    ManagedAcmeHttp01,
+    #[doc = "Managed directly by us with generic automated renewal."]
+    ManagedAutoRenew,
+    #[doc = "Managed directly by us manually without automated renewal."]
+    ManagedManual,
+    #[doc = "Certificates provided by third parties."]
+    ThirdPartyProvided,
+    #[doc = "Certificates fully managed and hosted by third parties."]
+    ThirdPartyManaged,
+    #[doc = "TLS certificates not applicable."]
+    NotApplicable,
 }
 
 #[doc = "Configuration for an individual supervised process or container."]
