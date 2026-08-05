@@ -14,7 +14,10 @@ processes:
     run: "watch -n 5 df -h"
     mode: "tui"
   - name: "fake-job"
-    run: "bash -c 'while true; do echo \"[Service] Processing task $RANDOM...\"; sleep 1.5; done'"
+    run: 
+      type: process
+      shell: bash
+      cmd: "while true; do echo \"[Service] Processing task $RANDOM...\"; sleep 1.5; done"
 layout:
   # 1. Carve out the left 35% of the screen.
   # Stack our primary system monitors vertically.

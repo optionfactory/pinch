@@ -16,7 +16,6 @@ processes:
     mode: "tui"
     run:
       type: "process"
-      bash: false
       cmd: "top"
   # 3. Docker container execution
   - name: "nginx-test"
