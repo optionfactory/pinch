@@ -2,7 +2,10 @@ mod docker;
 mod docker_intrude;
 mod process;
 
-use crate::config::{DockerNetworkConfig, ProcessRunConfig, RunKind, RunManifest, RunMode};
+use crate::{
+    config::{DockerNetworkConfig, ProcessRunConfig, RunKind, RunManifest, RunMode},
+    schema::WrappingShell,
+};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,7 +19,7 @@ pub type BuildResult = Result<BuildOutput, String>;
 pub struct RunContext<'a> {
     pub name: &'a str,
     pub vars: &'a HashMap<String, String>,
-    pub global_shell: Option<bool>,
+    pub global_shell: Option<WrappingShell>,
     pub default_docker_network: Option<&'a String>,
     pub defined_networks: &'a HashMap<String, DockerNetworkConfig>,
     pub background: bool,
@@ -31,7 +34,7 @@ impl RunBuilder for RunManifest {
         match self {
             RunManifest::Shorthand(cmd) => {
                 let process_run = ProcessRunConfig {
-                    bash: ctx.global_shell.unwrap_or(false),
+                    shell: ctx.global_shell,
                     cmd: cmd.clone(),
                 };
                 process_run.build_command(ctx)
@@ -51,10 +54,11 @@ impl RunBuilder for RunKind {
     }
 }
 
-pub fn parse_command_string(cmd: &str, bash: bool, name: &str) -> Result<Vec<String>, String> {
-    if bash {
-        Ok(vec!["bash".to_string(), "-c".to_string(), cmd.to_string()])
-    } else {
-        shlex::split(cmd).ok_or_else(|| format!("Failed to parse command for '{}': {}", name, cmd))
+pub fn parse_command_string(cmd: &str, shell: Option<WrappingShell>, name: &str) -> Result<Vec<String>, String> {
+    match shell {
+        Some(WrappingShell::Bash) => Ok(vec!["bash".to_string(), "-c".to_string(), cmd.to_string()]),
+        Some(WrappingShell::Zsh) => Ok(vec!["zsh".to_string(), "-c".to_string(), cmd.to_string()]),
+        Some(WrappingShell::Fish) => Ok(vec!["fish".to_string(), "-c".to_string(), cmd.to_string()]),
+        None => shlex::split(cmd).ok_or_else(|| format!("Failed to parse command for '{}': {}", name, cmd)),
     }
 }

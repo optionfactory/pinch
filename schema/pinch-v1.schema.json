@@ -55,8 +55,8 @@
       "const": 1
     },
     "shell": {
-      "description": "If true, executes shorthand command strings using `bash -c` globally (default: `false`).",
-      "type": "boolean"
+      "description": "If present, executes commands using the configed shell '-c' option globally.",
+      "$ref": "#/$defs/WrappingShell"
     },
     "vars": {
       "description": "Custom configuration variables available for string expansion (e.g., `{{var_name}}`).",
@@ -249,6 +249,16 @@
           "const": "basic"
         },
         {
+          "description": "Passkey authentication.",
+          "type": "string",
+          "const": "passkey"
+        },
+        {
+          "description": "LDAP authentication.",
+          "type": "string",
+          "const": "ldap"
+        },
+        {
           "description": "Custom HTML form authentication.",
           "type": "string",
           "const": "form"
@@ -424,6 +434,17 @@
           "description": "Target deployment environment.",
           "type": "string",
           "pattern": "^[A-Za-z0-9-_]+$"
+        },
+        "ownership": {
+          "description": "Architectural stack layers owned and maintained directly by our organization.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/StackLayer"
+          }
+        },
+        "platform": {
+          "description": "Underlying deployment platform (cloud, on-premises, edge).",
+          "$ref": "#/$defs/PlatformType"
         },
         "type": {
           "description": "Target deployment environment type.",
@@ -704,6 +725,11 @@
           "const": "deprecated"
         },
         {
+          "description": "Decommissioned, no longer actively developed, deployed or running.",
+          "type": "string",
+          "const": "end-of-life"
+        },
+        {
           "description": "In production but receiving only critical bug/security fixes.",
           "type": "string",
           "const": "maintenance"
@@ -747,6 +773,41 @@
           "description": "Allocates a PTY for interactive terminal applications (`top`, `vim`, `htop`).",
           "type": "string",
           "const": "tui"
+        }
+      ]
+    },
+    "PlatformType": {
+      "description": "Underlying deployment platform or infrastructure substrate.",
+      "oneOf": [
+        {
+          "description": "Hosted in public or private cloud infrastructure.",
+          "type": "string",
+          "const": "cloud"
+        },
+        {
+          "description": "Hosted in traditional third-party non-cloud server farms or hosting datacenters.",
+          "type": "string",
+          "const": "datacenter"
+        },
+        {
+          "description": "Hosted in self-managed physical on-premises datacenters.",
+          "type": "string",
+          "const": "on-premises"
+        },
+        {
+          "description": "Hosted in a third-party colocation facility.",
+          "type": "string",
+          "const": "colocation"
+        },
+        {
+          "description": "Hybrid deployment spanning both on-premises and cloud infrastructure.",
+          "type": "string",
+          "const": "hybrid"
+        },
+        {
+          "description": "Edge deployment located on customer premises, IoT devices, or remote nodes.",
+          "type": "string",
+          "const": "edge"
         }
       ]
     },
@@ -884,6 +945,11 @@
           "description": "Short-lived batch process, cron, or CI/CD script.",
           "type": "string",
           "const": "job"
+        },
+        {
+          "description": "Infrastructure-as-Code (e.g., Terraform, OpenTofu, Pulumi, or Ansible blueprints).",
+          "type": "string",
+          "const": "infrastructure"
         }
       ]
     },
@@ -894,13 +960,13 @@
           "description": "Spawns a standard local OS process.",
           "type": "object",
           "properties": {
-            "bash": {
-              "description": "Whether to wrap the command string in `bash -c` (default: `false`).",
-              "type": "boolean"
-            },
             "cmd": {
               "description": "The command string to execute.",
               "type": "string"
+            },
+            "shell": {
+              "description": "If present, executes commands using the configed shell '-c' option.",
+              "$ref": "#/$defs/WrappingShell"
             },
             "type": {
               "type": "string",
@@ -944,10 +1010,6 @@
           "description": "Spawns a local host binary attached inside a Docker bridge network namespace (`docker-intrude`).",
           "type": "object",
           "properties": {
-            "bash": {
-              "description": "Whether to wrap the command string in `bash -c` (default: `false`).",
-              "type": "boolean"
-            },
             "cmd": {
               "description": "Host command string to execute within the target network namespace.",
               "type": "string"
@@ -959,6 +1021,10 @@
             "network": {
               "description": "Target Docker network name (optional if exactly one network is defined in `docker_networks`).",
               "type": "string"
+            },
+            "shell": {
+              "description": "If present, executes commands using the configed shell '-c' option.",
+              "$ref": "#/$defs/WrappingShell"
             },
             "type": {
               "type": "string",
@@ -1065,6 +1131,40 @@
           "type": "string",
           "const": "tier4"
         }
+      ]
+    },
+    "StackLayer": {
+      "description": "Architectural stack layer managed directly by our organization.",
+      "oneOf": [
+        {
+          "description": "Physical datacenter, hardware servers, bare-metal hypervisors, and core networks.",
+          "type": "string",
+          "const": "infrastructure"
+        },
+        {
+          "description": "Base operating system installations, kernel patching, system packages, and VM maintenance.",
+          "type": "string",
+          "const": "operating-system"
+        },
+        {
+          "description": "Middleware, container runtimes, managed databases, service meshes, and platform services.",
+          "type": "string",
+          "const": "services"
+        },
+        {
+          "description": "Application binaries and configurations.",
+          "type": "string",
+          "const": "applications"
+        }
+      ]
+    },
+    "WrappingShell": {
+      "description": "Shell to be used to run commands.",
+      "type": "string",
+      "enum": [
+        "bash",
+        "zsh",
+        "fish"
       ]
     }
   }

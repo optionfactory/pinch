@@ -21,13 +21,13 @@ impl RunBuilder for crate::config::DockerIntrudeRunConfig {
             )
         })?;
 
-        let sanitized_title: String = ctx
+        let sanitized_name: String = ctx
             .name
             .replace('_', "-")
             .chars()
             .filter(|c| c.is_ascii_alphanumeric() || *c == '-')
             .collect();
-        let container_name = format!("pinch-ns-{}", sanitized_title.to_lowercase());
+        let container_name = format!("pinch-ns-{}", sanitized_name.to_lowercase());
         let actual_net_name = apply_vars(network, ctx.vars, false);
         let actual_ip = apply_vars(&self.ip, ctx.vars, false);
 
@@ -42,7 +42,7 @@ impl RunBuilder for crate::config::DockerIntrudeRunConfig {
             "--".to_string(),
         ];
         let expanded_cmd = apply_vars(self.cmd.trim(), ctx.vars, true);
-        let tokens = parse_command_string(&expanded_cmd, self.bash, ctx.name)?;
+        let tokens = parse_command_string(&expanded_cmd, self.shell.or(ctx.global_shell), ctx.name)?;
         cmd_vec.extend(tokens);
 
         Ok(BuildOutput {

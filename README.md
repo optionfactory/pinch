@@ -273,7 +273,7 @@ Configuration is defined in YAML. You can define global variables, default behav
 | `project` | Object | *Required* | High-level project metadata (`name`, `type`, `tier`, `lifecycle`, `compliance`, `auth`). |
 | `vars` | Map | `{}` | Custom variables (e.g., `env: "dev"`). Built-ins: `{{pwd}}`, `{{user}}`, `{{home}}`. |
 | `logs_max_size` | Integer | *None* | Maximum number of log lines to retain in memory per pane. |
-| `shell` | Boolean | `false` | If true, executes shorthand commands via `bash -c`. |
+| `shell` | Boolean | None | If present, executes commands using the configed shell '-c' option globally. |
 | `auto_start` | Boolean | `true` | Whether processes start automatically on launch. |
 | `auto_restart` | Boolean | `true` | Whether processes restart automatically if they exit. |
 | `grace_period` | Integer | `3000` | Delay in milliseconds before auto-restarting a process. |
@@ -359,7 +359,7 @@ Each item under `processes` defines a process to supervise:
   * **Shorthand (`string`)**: Runs a local command (defaults to `type: "process"`, `bash: false`).
   * **Process (`type: "process"`)**:
     * `cmd`: The command string to execute.
-    * `bash`: (Default `false`) If `true`, runs via `bash -c`.
+    * `shell`: If present, runs the command using the shell `-c` command.
   * **Docker (`type: "docker"`)**:
     * `image`: The Docker image to run.
     * `opts`: Arguments passed to `docker run --rm` (`--name`, `--network`, `--ip`, etc.).
@@ -368,7 +368,7 @@ Each item under `processes` defines a process to supervise:
     * `ip`: The target IP address in the network namespace.
     * `network`: (Optional if only one network is defined in `docker_networks`) The Docker network name.
     * `cmd`: The command to execute inside the namespace.
-    * `bash`: (Default `false`) If `true`, runs via `bash -c`.
+    * `shell`: If present, runs the command using the shell `-c` command.
 * `mode`: Either `log` (default) or `tui` (allocates a PTY for interactive terminal apps).
 * `cwd`: Working directory (supports variables like `{{pwd}}`).
 * `link`: An optional web URL or link associated with this process.
@@ -421,7 +421,6 @@ processes:
     mode: "tui"
     run:
       type: "process"
-      bash: false
       cmd: "top"
   - name: "nginx"
     run:

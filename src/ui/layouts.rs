@@ -97,10 +97,7 @@ pub fn compute_pane_geometries(
                 },
             };
 
-            let constraints: Vec<Constraint> = sub_splits
-                .iter()
-                .map(|s| Constraint::Percentage(s.size))
-                .collect();
+            let constraints: Vec<Constraint> = sub_splits.iter().map(|s| Constraint::Percentage(s.size)).collect();
 
             let sub_chunks = Layout::default()
                 .direction(split_direction)

@@ -43,10 +43,10 @@ pub struct PinchManifest {
     #[schemars(with = "u64")]
     pub grace_period: Option<u64>,
 
-    #[doc = "If true, executes shorthand command strings using `bash -c` globally (default: `false`)."]
+    #[doc = "If present, executes commands using the configed shell '-c' option globally."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "bool")]
-    pub shell: Option<bool>,
+    #[schemars(with = "WrappingShell")]
+    pub shell: Option<WrappingShell>,
 
     #[doc = "Custom Docker bridge networks managed and initialized by Pinch."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -62,6 +62,16 @@ pub struct PinchManifest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<LayoutBlock>")]
     pub layout: Option<Vec<LayoutBlock>>,
+}
+
+#[doc = "Shell to be used to run commands."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum WrappingShell {
+    Bash,
+    Zsh,
+    Fish,
 }
 
 #[doc = "High-level project identification, governance, and architecture classification."]
@@ -114,6 +124,8 @@ pub enum ProjectType {
     Tool,
     #[doc = "Short-lived batch process, cron, or CI/CD script."]
     Job,
+    #[doc = "Infrastructure-as-Code (e.g., Terraform, OpenTofu, Pulumi, or Ansible blueprints)."]
+    Infrastructure,
 }
 
 #[doc = "Operational maintenance status of the repository."]
@@ -125,6 +137,8 @@ pub enum LifecycleType {
     Active,
     #[doc = "Scheduled for decommissioning; do not add new dependencies."]
     Deprecated,
+    #[doc = "Decommissioned, no longer actively developed, deployed or running."]
+    EndOfLife,
     #[doc = "In production but receiving only critical bug/security fixes."]
     Maintenance,
     #[doc = "Experimental proof-of-concept; no production SLA."]
@@ -173,6 +187,10 @@ pub enum AuthType {
     Token,
     #[doc = "HTTP Basic authentication (legacy/internal)."]
     Basic,
+    #[doc = "Passkey authentication."]
+    Passkey,
+    #[doc = "LDAP authentication."]
+    Ldap,
     #[doc = "Custom HTML form authentication."]
     Form,
     #[doc = "Explicitly public endpoint accepting unauthenticated requests (e.g., public API or landing page)."]
@@ -444,6 +462,44 @@ pub enum AdsLoggingStatus {
     Disabled,
 }
 
+#[doc = "Environment-specific deployment configuration."]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EnvironmentManifest {
+    #[doc = "Target deployment environment."]
+    #[schemars(schema_with = "identifier_schema")]
+    pub name: String,
+
+    #[doc = "Target deployment environment type."]
+    #[serde(rename = "type")]
+    pub environment_type: EnvironmentType,
+
+    #[doc = "Underlying deployment platform (cloud, on-premises, edge)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "PlatformType")]
+    pub platform: Option<PlatformType>,
+
+    #[doc = "Architectural stack layers owned and maintained directly by our organization."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<StackLayer>")]
+    pub ownership: Option<Vec<StackLayer>>,
+
+    #[doc = "Network ingress reachability for this specific environment."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "ExposureType")]
+    pub ingress: Option<ExposureType>,
+
+    #[doc = "Network management reachability for this specific environment."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "ExposureType")]
+    pub management: Option<ExposureType>,
+
+    #[doc = "Map of domain names to their management origin (managed vs external)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "BTreeMap<String, DomainManagement>")]
+    pub domains: Option<BTreeMap<String, DomainManagement>>,
+}
+
 #[doc = "Supported deployment environment types."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -479,32 +535,38 @@ pub enum EnvironmentType {
     DisasterRecovery,
 }
 
-#[doc = "Environment-specific deployment configuration."]
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[doc = "Underlying deployment platform or infrastructure substrate."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
-pub struct EnvironmentManifest {
-    #[doc = "Target deployment environment."]
-    #[schemars(schema_with = "identifier_schema")]    
-    pub name: String,
+pub enum PlatformType {
+    #[doc = "Hosted in public or private cloud infrastructure."]
+    Cloud,
+    #[doc = "Hosted in traditional third-party non-cloud server farms or hosting datacenters."]
+    Datacenter,
+    #[doc = "Hosted in self-managed physical on-premises datacenters."]
+    OnPremises,
+    #[doc = "Hosted in a third-party colocation facility."]
+    Colocation,
+    #[doc = "Hybrid deployment spanning both on-premises and cloud infrastructure."]
+    Hybrid,
+    #[doc = "Edge deployment located on customer premises, IoT devices, or remote nodes."]
+    Edge,
+}
 
-    #[doc = "Target deployment environment type."]
-    #[serde(rename = "type")]
-    pub environment_type: EnvironmentType,
-
-    #[doc = "Network ingress reachability for this specific environment."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "ExposureType")]
-    pub ingress: Option<ExposureType>,
-
-    #[doc = "Network management reachability for this specific environment."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "ExposureType")]
-    pub management: Option<ExposureType>,
-
-    #[doc = "Map of domain names to their management origin (managed vs external)."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "BTreeMap<String, DomainManagement>")]
-    pub domains: Option<BTreeMap<String, DomainManagement>>,
+#[doc = "Architectural stack layer managed directly by our organization."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum StackLayer {
+    #[doc = "Physical datacenter, hardware servers, bare-metal hypervisors, and core networks."]
+    Infrastructure,
+    #[doc = "Base operating system installations, kernel patching, system packages, and VM maintenance."]
+    OperatingSystem,
+    #[doc = "Middleware, container runtimes, managed databases, service meshes, and platform services."]
+    Services,
+    #[doc = "Application binaries and configurations."]
+    Applications,
 }
 
 #[doc = "Network ingress reachability for the project."]
@@ -542,7 +604,7 @@ pub enum DomainManagement {
 #[serde(deny_unknown_fields)]
 pub struct ProcessManifest {
     #[doc = "Name of the process."]
-    #[schemars(schema_with = "identifier_schema")]    
+    #[schemars(schema_with = "identifier_schema")]
     pub name: String,
 
     #[doc = "Display name of the process pane in the TUI dashboard. (defaults to name)"]
@@ -622,9 +684,10 @@ pub enum RunKind {
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ProcessRunConfig {
-    #[doc = "Whether to wrap the command string in `bash -c` (default: `false`)."]
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub bash: bool,
+    #[doc = "If present, executes commands using the configed shell '-c' option."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "WrappingShell")]
+    pub shell: Option<WrappingShell>,
     #[doc = "The command string to execute."]
     pub cmd: String,
 }
@@ -655,9 +718,10 @@ pub struct DockerIntrudeRunConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub network: Option<String>,
-    #[doc = "Whether to wrap the command string in `bash -c` (default: `false`)."]
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub bash: bool,
+    #[doc = "If present, executes commands using the configed shell '-c' option."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "WrappingShell")]
+    pub shell: Option<WrappingShell>,
     #[doc = "Host command string to execute within the target network namespace."]
     pub cmd: String,
 }
