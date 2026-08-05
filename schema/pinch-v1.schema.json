@@ -29,7 +29,7 @@
       "description": "Progressive edge-carving layout rules defining how process panes are arranged.",
       "type": "array",
       "items": {
-        "$ref": "#/$defs/LayoutBlock"
+        "$ref": "#/$defs/LayoutNode"
       }
     },
     "logs_max_size": {
@@ -277,42 +277,15 @@
     },
     "CertManagement": {
       "description": "TLS certificate provisioning and renewal mechanism.",
-      "oneOf": [
-        {
-          "description": "Managed directly by us with auto-renewal via ACME DNS-01 challenge.",
-          "type": "string",
-          "const": "managed-acme-dns01"
-        },
-        {
-          "description": "Managed directly by us with auto-renewal via ACME HTTP-01 challenge.",
-          "type": "string",
-          "const": "managed-acme-http01"
-        },
-        {
-          "description": "Managed directly by us with generic automated renewal.",
-          "type": "string",
-          "const": "managed-auto-renew"
-        },
-        {
-          "description": "Managed directly by us manually without automated renewal.",
-          "type": "string",
-          "const": "managed-manual"
-        },
-        {
-          "description": "Certificates provided by third parties.",
-          "type": "string",
-          "const": "third-party-provided"
-        },
-        {
-          "description": "Certificates fully managed and hosted by third parties.",
-          "type": "string",
-          "const": "third-party-managed"
-        },
-        {
-          "description": "TLS certificates not applicable.",
-          "type": "string",
-          "const": "not-applicable"
-        }
+      "type": "string",
+      "enum": [
+        "managed-acme-dns01",
+        "managed-acme-http01",
+        "managed-auto-renew",
+        "managed-manual",
+        "third-party-provided",
+        "third-party-managed",
+        "not-applicable"
       ]
     },
     "ComplianceManifest": {
@@ -320,27 +293,27 @@
       "type": "object",
       "properties": {
         "ads": {
-          "description": "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block.\n\n### Applicability Scope\nMandatory under **Italian data protection regulations (Provvedimento Garante Privacy 2008/2009)** whenever technical personnel or automated processes hold **privileged administrative access** over systems or databases containing personal data.",
+          "description": "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block.",
           "$ref": "#/$defs/AdsManifest"
         },
         "ai_act": {
-          "description": "EU AI Act risk classification tier.\n\n### Applicability Scope\nApplies whenever the project develops, deploys, or integrates **AI/ML models, LLMs, foundation models, or automated decision-making/inference engines**.",
+          "description": "EU AI Act risk classification tier.",
           "$ref": "#/$defs/AiActClass"
         },
         "cra": {
-          "description": "EU Cyber Resilience Act (CRA) product classification tier.\n\n### Applicability Scope\nApplies to any **software product with digital elements** distributed, commercialized, or deployed in the EU marketplace (including standalone software, firmware, and SaaS runtimes).",
+          "description": "EU Cyber Resilience Act (CRA) product classification tier.",
           "$ref": "#/$defs/CraClass"
         },
         "dora": {
-          "description": "DORA (Digital Operational Resilience Act) criticality tag.\n\n### Applicability Scope\nApplies if the project operates within or provides ICT services to **EU financial institutions** (banks, insurance companies, investment firms, payment processors, or crypto-asset service providers).",
+          "description": "DORA (Digital Operational Resilience Act) criticality tag.",
           "$ref": "#/$defs/DoraCriticality"
         },
         "gdpr": {
-          "description": "GDPR data protection role and data residency boundaries.\n\n### Applicability Scope\nApplies to **any project that processes, stores, transmits, or logs personal data** (PII/SPI) belonging to individuals located in the EU/EEA.",
+          "description": "GDPR data protection role and data residency boundaries.",
           "$ref": "#/$defs/GdprManifest"
         },
         "nis2": {
-          "description": "EU NIS2 Directive criticality classification.\n\n### Applicability Scope\nApplies if the project supports **critical or important non-financial infrastructure** across the EU (such as energy, healthcare, transport, water, digital providers, SaaS marketplaces, or managed ICT services).",
+          "description": "EU NIS2 Directive criticality classification.",
           "$ref": "#/$defs/Nis2Category"
         }
       },
@@ -372,7 +345,7 @@
       ]
     },
     "DataResidency": {
-      "description": "Geographic data storage and processing boundary for compliance.\n\nStoring or transferring personal data across any EEA country (e.g., hosting servers in Norway or Iceland instead of Germany)\nmeets standard EU data residency requirements without requiring special cross-border transfer safeguards like Standard Contractual Clauses (SCCs)",
+      "description": "Geographic data storage and processing boundary for compliance.",
       "oneOf": [
         {
           "description": "Data is stored and processed strictly within European Union member states.",
@@ -393,17 +366,10 @@
     },
     "DnsManagement": {
       "description": "Domain management and ownership origin.",
-      "oneOf": [
-        {
-          "description": "Managed directly by our infrastructure / DNS.",
-          "type": "string",
-          "const": "managed"
-        },
-        {
-          "description": "Managed externally by a client, partner, or third party.",
-          "type": "string",
-          "const": "external"
-        }
+      "type": "string",
+      "enum": [
+        "managed",
+        "external"
       ]
     },
     "DockerNetworkConfig": {
@@ -418,14 +384,12 @@
           "type": "object",
           "properties": {
             "args": {
-              "description": "Custom CLI arguments passed to `docker network create`.",
               "type": "array",
               "items": {
                 "type": "string"
               }
             },
             "subnet": {
-              "description": "CIDR subnet string for the bridge network.",
               "type": "string"
             }
           },
@@ -510,112 +474,34 @@
     },
     "EnvironmentType": {
       "description": "Supported deployment environment types.",
-      "oneOf": [
-        {
-          "description": "Local developer workstation or local machine loopback.",
-          "type": "string",
-          "const": "local"
-        },
-        {
-          "description": "Shared cloud or hosted development environment.",
-          "type": "string",
-          "const": "development"
-        },
-        {
-          "description": "Short-lived, dynamic per-PR or per-branch preview environment.",
-          "type": "string",
-          "const": "preview"
-        },
-        {
-          "description": "Automated CI/CD integration and unit testing environment.",
-          "type": "string",
-          "const": "testing"
-        },
-        {
-          "description": "Dedicated Quality Assurance and manual regression environment.",
-          "type": "string",
-          "const": "qa"
-        },
-        {
-          "description": "User Acceptance Testing environment for business stakeholder validation.",
-          "type": "string",
-          "const": "uat"
-        },
-        {
-          "description": "Isolated sandbox playground for external integrations and experimentation.",
-          "type": "string",
-          "const": "sandbox"
-        },
-        {
-          "description": "Near-exact production replica environment running parallel cutover validation (ambiente di parallelo).",
-          "type": "string",
-          "const": "pre-production"
-        },
-        {
-          "description": "Pre-production mirror environment for final release candidate acceptance.",
-          "type": "string",
-          "const": "staging"
-        },
-        {
-          "description": "Sales demo, customer sandbox, or product preview environment.",
-          "type": "string",
-          "const": "demo"
-        },
-        {
-          "description": "Dedicated load testing and performance benchmarking environment.",
-          "type": "string",
-          "const": "performance"
-        },
-        {
-          "description": "Dark-launch or traffic-mirrored environment receiving real-time production traffic passively.",
-          "type": "string",
-          "const": "shadow"
-        },
-        {
-          "description": "Live customer-facing production environment.",
-          "type": "string",
-          "const": "production"
-        },
-        {
-          "description": "Disaster recovery, warm standby, or secondary failover region.",
-          "type": "string",
-          "const": "disaster-recovery"
-        }
+      "type": "string",
+      "enum": [
+        "local",
+        "development",
+        "preview",
+        "testing",
+        "qa",
+        "uat",
+        "sandbox",
+        "pre-production",
+        "staging",
+        "demo",
+        "performance",
+        "shadow",
+        "production",
+        "disaster-recovery"
       ]
     },
     "ExposureType": {
       "description": "Network ingress reachability for the project.",
-      "oneOf": [
-        {
-          "description": "Reachable only on localhost or local machine process loopback.",
-          "type": "string",
-          "const": "local"
-        },
-        {
-          "description": "Reachable only inside the private corporate VPN, VPC, or internal service mesh.",
-          "type": "string",
-          "const": "restricted-vpn"
-        },
-        {
-          "description": "Reachable from the internet but restricted by IP allowlisting or CIDR controls.",
-          "type": "string",
-          "const": "restricted-ip"
-        },
-        {
-          "description": "Reachable only through a Privileged Access Management (PAM) broker or session proxy (e.g., CyberArk, Teleport).",
-          "type": "string",
-          "const": "restricted-pam"
-        },
-        {
-          "description": "Publicly reachable from the internet.",
-          "type": "string",
-          "const": "internet"
-        },
-        {
-          "description": "No incoming network traffic (e.g., background worker or CLI tool).",
-          "type": "string",
-          "const": "none"
-        }
+      "type": "string",
+      "enum": [
+        "local",
+        "restricted-vpn",
+        "restricted-ip",
+        "restricted-pam",
+        "internet",
+        "none"
       ]
     },
     "GdprManifest": {
@@ -661,48 +547,6 @@
         }
       ]
     },
-    "LayoutBlock": {
-      "description": "A progressive edge-carving block ruleset for arranging terminal panes.",
-      "type": "object",
-      "properties": {
-        "direction": {
-          "description": "Split orientation for sub-panes inside an edge-carved block.",
-          "$ref": "#/$defs/LayoutDirection"
-        },
-        "edge": {
-          "description": "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`).",
-          "$ref": "#/$defs/LayoutEdge"
-        },
-        "name": {
-          "description": "Target process name to place inside this block (or `\"Combined Logs\"`).",
-          "type": "string",
-          "pattern": "^[A-Za-z0-9-_]+$"
-        },
-        "size": {
-          "description": "Percentage of currently available space to allocate (0 to 100).",
-          "type": "integer",
-          "format": "uint16",
-          "maximum": 65535,
-          "minimum": 0
-        },
-        "splits": {
-          "description": "Sub-panes to arrange within this carved edge block.",
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/LayoutSplit"
-          }
-        },
-        "unassigned": {
-          "description": "If true, automatically places all unassigned process panes inside this block.",
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "edge",
-        "size"
-      ]
-    },
     "LayoutDirection": {
       "description": "Split orientation for sub-panes (`horizontal` or `vertical`).",
       "type": "string",
@@ -713,53 +557,115 @@
     },
     "LayoutEdge": {
       "description": "Target edge of the terminal space to carve from.",
-      "oneOf": [
-        {
-          "description": "Carve from the top edge.",
-          "type": "string",
-          "const": "top"
-        },
-        {
-          "description": "Carve from the bottom edge.",
-          "type": "string",
-          "const": "bottom"
-        },
-        {
-          "description": "Carve from the left edge.",
-          "type": "string",
-          "const": "left"
-        },
-        {
-          "description": "Carve from the right edge.",
-          "type": "string",
-          "const": "right"
-        }
+      "type": "string",
+      "enum": [
+        "top",
+        "bottom",
+        "left",
+        "right"
       ]
     },
-    "LayoutSplit": {
-      "description": "A sub-pane division within an edge-carved layout block.",
+    "LayoutNode": {
+      "description": "A recursive edge-carving and splitting node for arranging terminal panes.",
       "type": "object",
       "properties": {
+        "direction": {
+          "description": "Split orientation for child panes inside this node (`horizontal` or `vertical`).",
+          "$ref": "#/$defs/LayoutDirection"
+        },
+        "edge": {
+          "description": "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`).",
+          "$ref": "#/$defs/LayoutEdge"
+        },
+        "items": {
+          "description": "Layout nodes to recursively arrange within this node.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/LayoutNode"
+          }
+        },
         "name": {
-          "description": "Target process name to place inside this split (or `\"combined-logs\"`).",
+          "description": "Target process name to place inside this pane (or `\"combined-logs\"`).",
           "type": "string",
           "pattern": "^[A-Za-z0-9-_]+$"
         },
         "size": {
-          "description": "Percentage of space within the parent block to allocate (0 to 100).",
+          "description": "Percentage of available space to allocate (0 to 100). Auto-calculated among siblings if omitted.",
           "type": "integer",
           "format": "uint16",
-          "maximum": 65535,
+          "maximum": 100,
           "minimum": 0
         },
         "unassigned": {
-          "description": "If true, automatically places all unassigned process panes inside this split.",
+          "description": "If true, automatically places all unassigned process panes inside this node.",
           "type": "boolean"
         }
       },
       "additionalProperties": false,
-      "required": [
-        "size"
+      "oneOf": [
+        {
+          "description": "Leaf node targeting a specific process name or 'combined-logs'",
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "unassigned"
+                ]
+              },
+              {
+                "required": [
+                  "items"
+                ]
+              }
+            ]
+          },
+          "required": [
+            "name"
+          ]
+        },
+        {
+          "description": "Leaf node acting as the container for unassigned process panes",
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "name"
+                ]
+              },
+              {
+                "required": [
+                  "items"
+                ]
+              }
+            ]
+          },
+          "required": [
+            "unassigned"
+          ]
+        },
+        {
+          "description": "Branch node splitting screen area recursively among child nodes",
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "name"
+                ]
+              },
+              {
+                "required": [
+                  "unassigned"
+                ]
+              }
+            ]
+          },
+          "required": [
+            "items"
+          ]
+        }
       ]
     },
     "LifecycleType": {
@@ -814,77 +720,27 @@
     },
     "PaneMode": {
       "description": "Display rendering mode for a process pane.",
-      "oneOf": [
-        {
-          "description": "Standard streaming log tailer with wrap and truncation controls.",
-          "type": "string",
-          "const": "log"
-        },
-        {
-          "description": "Allocates a PTY for interactive terminal applications (`top`, `vim`, `htop`).",
-          "type": "string",
-          "const": "tui"
-        }
+      "type": "string",
+      "enum": [
+        "log",
+        "tui"
       ]
     },
     "PlatformType": {
       "description": "Underlying deployment platform or infrastructure substrate.",
-      "oneOf": [
-        {
-          "description": "Hosted in public or private cloud infrastructure.",
-          "type": "string",
-          "const": "cloud"
-        },
-        {
-          "description": "Hosted using the AWS cloud provider.",
-          "type": "string",
-          "const": "cloud-aws"
-        },
-        {
-          "description": "Hosted using the Azure cloud provider.",
-          "type": "string",
-          "const": "cloud-azure"
-        },
-        {
-          "description": "Hosted using the Google Cloud Platform provider.",
-          "type": "string",
-          "const": "cloud-gcp"
-        },
-        {
-          "description": "Hosted using the Hetzner cloud provider.",
-          "type": "string",
-          "const": "cloud-hetzner"
-        },
-        {
-          "description": "Hosted in traditional third-party non-cloud server farms or hosting datacenters.",
-          "type": "string",
-          "const": "datacenter"
-        },
-        {
-          "description": "Hosted in self-managed physical on-premises datacenters.",
-          "type": "string",
-          "const": "on-premises"
-        },
-        {
-          "description": "Hosted in a third-party colocation facility.",
-          "type": "string",
-          "const": "colocation"
-        },
-        {
-          "description": "Hybrid deployment spanning both on-premises and cloud infrastructure.",
-          "type": "string",
-          "const": "hybrid"
-        },
-        {
-          "description": "Edge deployment located on customer premises, IoT devices, or remote nodes.",
-          "type": "string",
-          "const": "edge"
-        },
-        {
-          "description": "Private developer network",
-          "type": "string",
-          "const": "dev-network"
-        }
+      "type": "string",
+      "enum": [
+        "cloud",
+        "cloud-aws",
+        "cloud-azure",
+        "cloud-gcp",
+        "cloud-hetzner",
+        "datacenter",
+        "on-premises",
+        "colocation",
+        "hybrid",
+        "edge",
+        "dev-network"
       ]
     },
     "ProcessManifest": {
@@ -927,7 +783,7 @@
           "$ref": "#/$defs/RunManifest"
         },
         "title": {
-          "description": "Display name of the process pane in the TUI dashboard. (defaults to name)",
+          "description": "Display name of the process pane in the TUI dashboard (defaults to name).",
           "type": "string"
         },
         "watch": {
@@ -1235,27 +1091,12 @@
     },
     "StackLayer": {
       "description": "Architectural stack layer managed directly by our organization.",
-      "oneOf": [
-        {
-          "description": "Physical datacenter, hardware servers, bare-metal hypervisors, and core networks.",
-          "type": "string",
-          "const": "infrastructure"
-        },
-        {
-          "description": "Base operating system installations, kernel patching, system packages, and VM maintenance.",
-          "type": "string",
-          "const": "operating-system"
-        },
-        {
-          "description": "Middleware, container runtimes, managed databases, service meshes, and platform services.",
-          "type": "string",
-          "const": "services"
-        },
-        {
-          "description": "Application binaries and configurations.",
-          "type": "string",
-          "const": "applications"
-        }
+      "type": "string",
+      "enum": [
+        "infrastructure",
+        "operating-system",
+        "services",
+        "applications"
       ]
     },
     "WrappingShell": {

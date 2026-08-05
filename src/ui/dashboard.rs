@@ -1,5 +1,5 @@
-use crate::config::LayoutBlock;
 use crate::processes::panes::ProcessPane;
+use crate::schema::LayoutNode;
 use crate::ui::layouts::PaneGeometry;
 use ratatui::layout::Rect;
 use ratatui::text::Line;
@@ -17,7 +17,7 @@ pub struct DashboardState {
     pub global_view_top: Option<usize>,
     pub global_area_height: usize,
     pub should_quit: bool,
-    pub layout: Vec<LayoutBlock>,
+    pub layout: Vec<LayoutNode>,
     pub cached_geometries: Vec<PaneGeometry>,
     pub last_grid_area: Rect,
     pub layout_dirty: bool,

@@ -1,5 +1,5 @@
 use crate::runners::{RunBuilder, RunContext};
-use crate::schema::{LayoutBlock, PaneMode, PinchManifest};
+use crate::schema::{LayoutNode, PaneMode, PinchManifest};
 use crate::vars::apply_vars;
 use crate::vars::builtin_vars;
 use serde::Serialize;
@@ -11,7 +11,7 @@ pub struct PinchConfig {
     pub name: String,
     pub processes: Vec<ProcessConfig>,
     pub logs_max_size: Option<usize>,
-    pub layout: Vec<LayoutBlock>,
+    pub layout: Vec<LayoutNode>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]

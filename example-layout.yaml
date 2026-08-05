@@ -24,7 +24,7 @@ layout:
   - edge: "left"
     size: 35
     direction: "vertical"
-    splits:
+    items:
       - name: "system-monitor"
         size: 60
       - name: "cpu-mem-stats"
@@ -34,10 +34,8 @@ layout:
   - edge: "bottom"
     size: 30
     direction: "horizontal"
-    splits:
+    items:
       - name: "combined-logs" # The special global logs panel
-        size: 50
       - name: "fake-job" # Our bash loop generating fake logs
-        size: 50
   # 3. Unassigned Panes
   # "ping" and "disk-usage" are not mentioned in the layout.

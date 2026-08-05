@@ -60,8 +60,8 @@ pub struct PinchManifest {
 
     #[doc = "Progressive edge-carving layout rules defining how process panes are arranged."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "Vec<LayoutBlock>")]
-    pub layout: Option<Vec<LayoutBlock>>,
+    #[schemars(with = "Vec<LayoutNode>")]
+    pub layout: Option<Vec<LayoutNode>>,
 }
 
 #[doc = "Shell to be used to run commands."]
@@ -260,49 +260,31 @@ pub enum Sensitivity {
 #[serde(deny_unknown_fields)]
 pub struct ComplianceManifest {
     #[doc = "DORA (Digital Operational Resilience Act) criticality tag."]
-    #[doc = ""]
-    #[doc = "### Applicability Scope"]
-    #[doc = "Applies if the project operates within or provides ICT services to **EU financial institutions** (banks, insurance companies, investment firms, payment processors, or crypto-asset service providers)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "DoraCriticality")]
     pub dora: Option<DoraCriticality>,
 
     #[doc = "EU Cyber Resilience Act (CRA) product classification tier."]
-    #[doc = ""]
-    #[doc = "### Applicability Scope"]
-    #[doc = "Applies to any **software product with digital elements** distributed, commercialized, or deployed in the EU marketplace (including standalone software, firmware, and SaaS runtimes)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "CraClass")]
     pub cra: Option<CraClass>,
 
     #[doc = "EU NIS2 Directive criticality classification."]
-    #[doc = ""]
-    #[doc = "### Applicability Scope"]
-    #[doc = "Applies if the project supports **critical or important non-financial infrastructure** across the EU (such as energy, healthcare, transport, water, digital providers, SaaS marketplaces, or managed ICT services)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Nis2Category")]
     pub nis2: Option<Nis2Category>,
 
     #[doc = "EU AI Act risk classification tier."]
-    #[doc = ""]
-    #[doc = "### Applicability Scope"]
-    #[doc = "Applies whenever the project develops, deploys, or integrates **AI/ML models, LLMs, foundation models, or automated decision-making/inference engines**."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AiActClass")]
     pub ai_act: Option<AiActClass>,
 
     #[doc = "GDPR data protection role and data residency boundaries."]
-    #[doc = ""]
-    #[doc = "### Applicability Scope"]
-    #[doc = "Applies to **any project that processes, stores, transmits, or logs personal data** (PII/SPI) belonging to individuals located in the EU/EEA."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "GdprManifest")]
     pub gdpr: Option<GdprManifest>,
 
     #[doc = "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block."]
-    #[doc = ""]
-    #[doc = "### Applicability Scope"]
-    #[doc = "Mandatory under **Italian data protection regulations (Provvedimento Garante Privacy 2008/2009)** whenever technical personnel or automated processes hold **privileged administrative access** over systems or databases containing personal data."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "AdsManifest")]
     pub ads: Option<AdsManifest>,
@@ -352,9 +334,6 @@ pub struct GdprManifest {
 }
 
 #[doc = "Geographic data storage and processing boundary for compliance."]
-#[doc = ""]
-#[doc = "Storing or transferring personal data across any EEA country (e.g., hosting servers in Norway or Iceland instead of Germany)"]
-#[doc = "meets standard EU data residency requirements without requiring special cross-border transfer safeguards like Standard Contractual Clauses (SCCs)"]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
@@ -389,7 +368,6 @@ pub enum GdprRole {
 pub enum DoraCriticality {
     #[doc = "Supports a Critical or Important Function (CIF) subject to strict RTO/RPO SLAs."]
     CifSupported,
-
     #[doc = "Non-critical ICT supporting service or internal developer utility."]
     NonCritical,
 }
@@ -401,13 +379,10 @@ pub enum DoraCriticality {
 pub enum CraClass {
     #[doc = "Default category: Standard software product with digital elements."]
     Default,
-
     #[doc = "Important Class I: Identity management, password managers, VPNs, network monitors."]
     ImportantClass1,
-
     #[doc = "Important Class II: Hypervisors, container runtimes, firewalls, IDS/IPS."]
     ImportantClass2,
-
     #[doc = "Critical: Smartcards, hardware security modules, and core cryptographic hardware/software."]
     Critical,
 }
@@ -442,13 +417,10 @@ pub struct AdsManifest {
 pub enum AdsResponsibility {
     #[doc = "Our organization directly manages the system/infrastructure as AdS."]
     Internal,
-
     #[doc = "An external Managed Service Provider (MSP) / Vendor holds AdS duties."]
     ExternalProcessor,
-
     #[doc = "The client / customer holds AdS responsibility for their own environment."]
     ClientManaged,
-
     #[doc = "No AdS scope applies (no personal data processed or no privileged access)."]
     NotApplicable,
 }
@@ -460,16 +432,12 @@ pub enum AdsResponsibility {
 pub enum AdsLoggingStatus {
     #[doc = "Immutable access logs recorded and retained for at least 6 months (standard)."]
     Immutable6Months,
-
     #[doc = "Immutable access logs recorded and retained for at least 12 months (banking/health)."]
     Immutable12Months,
-
     #[doc = "Logging is enabled but not tamper-proof or integrity-verified."]
     StandardLoggingOnly,
-
     #[doc = "Access logging is delegated to external cloud/infrastructure provider."]
     ExternalProvider,
-
     #[doc = "Logging is not implemented or disabled."]
     Disabled,
 }
@@ -526,33 +494,19 @@ pub struct EnvironmentManifest {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum EnvironmentType {
-    #[doc = "Local developer workstation or local machine loopback."]
     Local,
-    #[doc = "Shared cloud or hosted development environment."]
     Development,
-    #[doc = "Short-lived, dynamic per-PR or per-branch preview environment."]
     Preview,
-    #[doc = "Automated CI/CD integration and unit testing environment."]
     Testing,
-    #[doc = "Dedicated Quality Assurance and manual regression environment."]
     Qa,
-    #[doc = "User Acceptance Testing environment for business stakeholder validation."]
     Uat,
-    #[doc = "Isolated sandbox playground for external integrations and experimentation."]
     Sandbox,
-    #[doc = "Near-exact production replica environment running parallel cutover validation (ambiente di parallelo)."]
     PreProduction,
-    #[doc = "Pre-production mirror environment for final release candidate acceptance."]
     Staging,
-    #[doc = "Sales demo, customer sandbox, or product preview environment."]
     Demo,
-    #[doc = "Dedicated load testing and performance benchmarking environment."]
     Performance,
-    #[doc = "Dark-launch or traffic-mirrored environment receiving real-time production traffic passively."]
     Shadow,
-    #[doc = "Live customer-facing production environment."]
     Production,
-    #[doc = "Disaster recovery, warm standby, or secondary failover region."]
     DisasterRecovery,
 }
 
@@ -561,27 +515,16 @@ pub enum EnvironmentType {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum PlatformType {
-    #[doc = "Hosted in public or private cloud infrastructure."]
     Cloud,
-    #[doc = "Hosted using the AWS cloud provider."]
     CloudAws,
-    #[doc = "Hosted using the Azure cloud provider."]
     CloudAzure,
-    #[doc = "Hosted using the Google Cloud Platform provider."]
     CloudGcp,
-    #[doc = "Hosted using the Hetzner cloud provider."]
     CloudHetzner,
-    #[doc = "Hosted in traditional third-party non-cloud server farms or hosting datacenters."]
     Datacenter,
-    #[doc = "Hosted in self-managed physical on-premises datacenters."]
     OnPremises,
-    #[doc = "Hosted in a third-party colocation facility."]
     Colocation,
-    #[doc = "Hybrid deployment spanning both on-premises and cloud infrastructure."]
     Hybrid,
-    #[doc = "Edge deployment located on customer premises, IoT devices, or remote nodes."]
     Edge,
-    #[doc = "Private developer network"]
     DevNetwork,
 }
 
@@ -590,13 +533,9 @@ pub enum PlatformType {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum StackLayer {
-    #[doc = "Physical datacenter, hardware servers, bare-metal hypervisors, and core networks."]
     Infrastructure,
-    #[doc = "Base operating system installations, kernel patching, system packages, and VM maintenance."]
     OperatingSystem,
-    #[doc = "Middleware, container runtimes, managed databases, service meshes, and platform services."]
     Services,
-    #[doc = "Application binaries and configurations."]
     Applications,
 }
 
@@ -605,17 +544,11 @@ pub enum StackLayer {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum ExposureType {
-    #[doc = "Reachable only on localhost or local machine process loopback."]
     Local,
-    #[doc = "Reachable only inside the private corporate VPN, VPC, or internal service mesh."]
     RestrictedVpn,
-    #[doc = "Reachable from the internet but restricted by IP allowlisting or CIDR controls."]
     RestrictedIp,
-    #[doc = "Reachable only through a Privileged Access Management (PAM) broker or session proxy (e.g., CyberArk, Teleport)."]
     RestrictedPam,
-    #[doc = "Publicly reachable from the internet."]
     Internet,
-    #[doc = "No incoming network traffic (e.g., background worker or CLI tool)."]
     None,
 }
 
@@ -624,9 +557,7 @@ pub enum ExposureType {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum DnsManagement {
-    #[doc = "Managed directly by our infrastructure / DNS."]
     Managed,
-    #[doc = "Managed externally by a client, partner, or third party."]
     External,
 }
 
@@ -635,19 +566,12 @@ pub enum DnsManagement {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum CertManagement {
-    #[doc = "Managed directly by us with auto-renewal via ACME DNS-01 challenge."]
     ManagedAcmeDns01,
-    #[doc = "Managed directly by us with auto-renewal via ACME HTTP-01 challenge."]
     ManagedAcmeHttp01,
-    #[doc = "Managed directly by us with generic automated renewal."]
     ManagedAutoRenew,
-    #[doc = "Managed directly by us manually without automated renewal."]
     ManagedManual,
-    #[doc = "Certificates provided by third parties."]
     ThirdPartyProvided,
-    #[doc = "Certificates fully managed and hosted by third parties."]
     ThirdPartyManaged,
-    #[doc = "TLS certificates not applicable."]
     NotApplicable,
 }
 
@@ -659,7 +583,7 @@ pub struct ProcessManifest {
     #[schemars(schema_with = "identifier_schema")]
     pub name: String,
 
-    #[doc = "Display name of the process pane in the TUI dashboard. (defaults to name)"]
+    #[doc = "Display name of the process pane in the TUI dashboard (defaults to name)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub title: Option<String>,
@@ -787,9 +711,7 @@ pub enum DockerNetworkConfig {
     Simple(String),
     #[doc = "Explicit network configuration specifying subnet CIDR and custom Docker creation arguments."]
     Detailed {
-        #[doc = "CIDR subnet string for the bridge network."]
         subnet: String,
-        #[doc = "Custom CLI arguments passed to `docker network create`."]
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[schemars(with = "Vec<String>")]
         args: Option<Vec<String>>,
@@ -817,41 +739,60 @@ impl DockerNetworkConfig {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum PaneMode {
-    #[doc = "Standard streaming log tailer with wrap and truncation controls."]
     Log,
-    #[doc = "Allocates a PTY for interactive terminal applications (`top`, `vim`, `htop`)."]
     Tui,
 }
 
-#[doc = "A progressive edge-carving block ruleset for arranging terminal panes."]
+#[doc = "A recursive edge-carving and splitting node for arranging terminal panes."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct LayoutBlock {
-    #[doc = "Target process name to place inside this block (or `\"Combined Logs\"`)."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(schema_with = "identifier_schema")]
-    pub name: Option<String>,
-
+#[schemars(extend("oneOf" = [
+    {
+        "description": "Leaf node targeting a specific process name or 'combined-logs'",
+        "required": ["name"],
+        "not": { "anyOf": [{ "required": ["unassigned"] }, { "required": ["items"] }] }
+    },
+    {
+        "description": "Leaf node acting as the container for unassigned process panes",
+        "required": ["unassigned"],
+        "not": { "anyOf": [{ "required": ["name"] }, { "required": ["items"] }] }
+    },
+    {
+        "description": "Branch node splitting screen area recursively among child nodes",
+        "required": ["items"],
+        "not": { "anyOf": [{ "required": ["name"] }, { "required": ["unassigned"] }] }
+    }
+]))]
+pub struct LayoutNode {
     #[doc = "Side of the remaining terminal space to carve from (`top`, `bottom`, `left`, `right`)."]
-    pub edge: LayoutEdge,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "LayoutEdge")]
+    pub edge: Option<LayoutEdge>,
 
-    #[doc = "Percentage of currently available space to allocate (0 to 100)."]
-    pub size: u16,
+    #[doc = "Percentage of available space to allocate (0 to 100). Auto-calculated among siblings if omitted."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "u16")]
+    #[schemars(range(min = 0, max = 100))]
+    pub size: Option<u16>,
 
-    #[doc = "Split orientation for sub-panes inside an edge-carved block."]
+    #[doc = "Split orientation for child panes inside this node (`horizontal` or `vertical`)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "LayoutDirection")]
     pub direction: Option<LayoutDirection>,
 
-    #[doc = "Sub-panes to arrange within this carved edge block."]
+    #[doc = "Target process name to place inside this pane (or `\"combined-logs\"`)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "Vec<LayoutSplit>")]
-    pub splits: Option<Vec<LayoutSplit>>,
+    #[schemars(schema_with = "identifier_schema")]
+    pub name: Option<String>,
 
-    #[doc = "If true, automatically places all unassigned process panes inside this block."]
+    #[doc = "If true, automatically places all unassigned process panes inside this node."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub unassigned: Option<bool>,
+
+    #[doc = "Layout nodes to recursively arrange within this node."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub items: Option<Vec<LayoutNode>>,
 }
 
 #[doc = "Target edge of the terminal space to carve from."]
@@ -859,13 +800,9 @@ pub struct LayoutBlock {
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
 pub enum LayoutEdge {
-    #[doc = "Carve from the top edge."]
     Top,
-    #[doc = "Carve from the bottom edge."]
     Bottom,
-    #[doc = "Carve from the left edge."]
     Left,
-    #[doc = "Carve from the right edge."]
     Right,
 }
 
@@ -876,24 +813,6 @@ pub enum LayoutEdge {
 pub enum LayoutDirection {
     Horizontal,
     Vertical,
-}
-
-#[doc = "A sub-pane division within an edge-carved layout block."]
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct LayoutSplit {
-    #[doc = "Target process name to place inside this split (or `\"combined-logs\"`)."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(schema_with = "identifier_schema")]
-    pub name: Option<String>,
-
-    #[doc = "Percentage of space within the parent block to allocate (0 to 100)."]
-    pub size: u16,
-
-    #[doc = "If true, automatically places all unassigned process panes inside this split."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "bool")]
-    pub unassigned: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

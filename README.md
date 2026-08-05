@@ -462,38 +462,73 @@ processes:
 
 ## Layout Engine
 
-Pinch uses a **progressive, edge-carving** layout system.
+Pinch uses a **recursive, edge-carving** layout system (`LayoutNode`). Top-level nodes carve percentage slices off screen boundaries, while child nodes recursively split allocated regions into sub-panes.
 
-### How Edge-Carving Works
+### How Layout Resolution Works
+1. **Canvas Initialization:** Pinch starts with the full terminal grid (`100% width x 100% height`).
+2. **Sequential Edge Carving:** Root nodes specifying an `edge` (`left`, `right`, `top`, or `bottom`) sequentially slice percentages off the remaining outer screen area.
+3. **Recursive Sub-Splitting:** Nodes with `items` split their assigned area horizontally or vertically across child nodes.
+4. **Automatic Sizing:** When child nodes omit `size`, any unallocated space is automatically divided equally among unsized siblings.
+5. **Unassigned Panes:** Any process not explicitly referenced in the layout is routed to the node marked `unassigned: true` (or distributed into leftover center space).
 
-1. **The Starting Canvas:** Pinch begins with a single full-screen rectangle (`100% width x 100% height`).
-2. **Sequential Carving:** Each block defined in your `layout` array carves out a slice from one of the outer edges (`left`, `right`, `top`, or `bottom`) of the *currently remaining* screen space.
-3. **Sub-splitting:** A carved slice can be divided into sub-panes (`splits`) horizontally or vertically.
-4. **Unassigned Area:** Any process *not* explicitly placed in the layout automatically populates whatever space remains in the center (or gets routed to a block with `unassigned: true`).
+### Layout Node Schema
 
-### Visual Step-by-Step
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `edge` | `top` \| `bottom` \| `left` \| `right` | Carves a percentage slice off the remaining outer terminal bounds. |
+| `size` | `integer` (0–100) | Percentage of available space to allocate. Automatically distributed among unsized siblings if omitted. |
+| `direction` | `horizontal` \| `vertical` | Split axis for child nodes. Defaults to perpendicular orientation derived from `edge`. |
+| `name` | `string` | Target process `name` or `"combined-logs"`. |
+| `unassigned` | `boolean` | Designates the node as the fallback container for all unassigned process panes. |
+| `items` | `list` | Nested list of child `LayoutNode` elements. |
+
+### Layout Rules & Resolution Behaviors
+
+Layout structures are validated via JSON Schema in your IDE while providing automatic fallbacks in the TUI renderer:
+
+**1. Node Variant Rules**
+IDE schema validation enforces three clean structural node types via `oneOf`:
+* **Named Leaf Node:** Specifies `name` (e.g., `name: "api-server"` or `name: "combined-logs"`). Must not contain `unassigned` or `items`.
+* **Unassigned Leaf Node:** Specifies `unassigned: true`. Must not contain `name` or `items`.
+* **Branch Node:** Specifies `items` containing a list of sub-nodes. Must not contain `name` or `unassigned`.
+
+**2. Size & Allocation Limits**
+* **Percentage Bounds:** Explicit `size` values are expected to be integers between `0` and `100`.
+* **Automatic Auto-Sizing:** If sibling nodes omit `size`, any remaining unallocated percentage after explicit `size` definitions is divided equally among them.
+
+**3. Fallback Container Resolution**
+* **Single Unassigned Block:** `unassigned: true` should be specified at most once per layout. If multiple unassigned containers are declared, the runtime engine captures unassigned processes into the first declared container.
+* **Implicit Center Grid:** If `unassigned: true` is omitted entirely, any unallocated process panes automatically populate whatever leftover center space remains after edge carving.
+
+**4. Direction & Orientation Defaults**
+* Top-level nodes specifying `edge: left` or `edge: right` default their child split `direction` to `vertical`.
+* Top-level nodes specifying `edge: top` or `edge: bottom` default their child split `direction` to `horizontal`.
+* Child branch nodes inside nested `items` inherit their parent's container bounds and split perpendicular to sibling flow unless an explicit `direction` is defined.
+
+---
+
+### Visual Step-by-Step Example
 
 Given this configuration:
 
 ```yaml
 layout:
-  # Step 1: Carve 30% from the LEFT edge (split top/bottom)
+  # Step 1: Carve 30% from the LEFT edge (vertical stack of two panes)
   - edge: "left"
     size: 30
     direction: "vertical"
-    splits:
+    items:
       - name: "system-monitor"
         size: 50
       - name: "cpu-mem-stats"
         size: 50
 
-  # Step 2: Carve 25% from the BOTTOM edge of the REMAINING space
+  # Step 2: Carve 25% from the BOTTOM edge of remaining space
   - edge: "bottom"
     size: 25
     direction: "horizontal"
-    splits:
+    items:
       - name: "combined-logs"
-        size: 100
 
   # Step 3: Unassigned processes ("ping", "disk-usage") fill the remaining center
 ```
@@ -518,21 +553,10 @@ layout:
 +-------------------+-----------------------------------+
 ```
 
-### Layout Configuration Options
-
-* **`edge`**: Which side to carve from (`left`, `right`, `top`, `bottom`).
-* **`size`**: Percentage of the *currently available* screen space to carve out (0 to 100).
-* **`direction`**: Orientation for sub-splits (`horizontal` or `vertical`).
-* **`splits`**: An array of sub-panes inside this carved slice.
-  * **`name`**: Name matching a process, or `"combined-logs"` for the global log stream.
-  * **`size`**: Percentage of space within this slice allocated to the sub-pane.
-  * **`unassigned`**: (`true`/`false`) If set to `true`, routes all remaining unassigned processes into this sub-pane instead of the default center space.
-
-### Full Layout Example
+### Comprehensive Layout Example
 
 ```yaml
 schema_version: 1
-
 project:
   name: "MyProject"
   type: service
@@ -541,28 +565,33 @@ processes:
     run: "top"
     mode: "tui"
   - name: "backend-api"
-    run: "cargo run"
+    run: "vmstat 1"
   - name: "frontend-ui"
-    run: "npm run dev"
+    run: "vmstat 1"
   - name: "database"
-    run: "docker logs -f pg_db"
+    run: "vmstat 1"
+  - name: "cache"
+    run: "vmstat 1"
 layout:
-  # 1. Carve out 35% from the left edge, split into system-monitor and database
+  # 1. Carve out 35% from the left edge
   - edge: "left"
     size: 35
     direction: "vertical"
-    splits:
+    items:
       - name: "system-monitor"
-        size: 50
-      - name: "database"
-        size: 50
-  # 2. Carve out 30% from the bottom of the remaining screen for global logs and unassigned processes
+        size: 40
+      # recursive sub-split: Divide the remaining 60% vertical area horizontally into sub-panes
+      - direction: "horizontal"
+        items:
+          - name: "database"
+          - name: "cache" # Omitting `size` automatically splits space 50/50 between database & cache
+  # 2. Carve out 30% from the bottom of remaining space for logs and unassigned processes
   - edge: "bottom"
     size: 30
     direction: "horizontal"
-    splits:
+    items:
       - name: "combined-logs"
         size: 50
-      - unassigned: true # "Backend API" and "Frontend UI" are automatically placed side-by-side here
+      - unassigned: true # "backend-api" and "frontend-ui" are automatically placed side-by-side here
         size: 50
 ```
