@@ -573,6 +573,8 @@ pub enum PlatformType {
     Hybrid,
     #[doc = "Edge deployment located on customer premises, IoT devices, or remote nodes."]
     Edge,
+    #[doc = "Private developer network"]
+    DevNetwork
 }
 
 #[doc = "Architectural stack layer managed directly by our organization."]

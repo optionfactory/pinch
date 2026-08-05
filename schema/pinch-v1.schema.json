@@ -859,6 +859,11 @@
           "description": "Edge deployment located on customer premises, IoT devices, or remote nodes.",
           "type": "string",
           "const": "edge"
+        },
+        {
+          "description": "Private developer network",
+          "type": "string",
+          "const": "dev-network"
         }
       ]
     },
