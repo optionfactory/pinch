@@ -720,7 +720,7 @@ pub struct LayoutBlock {
     pub edge: LayoutEdge,
 
     #[doc = "Percentage of currently available space to allocate (0 to 100)."]
-    pub size_percentage: u16,
+    pub size: u16,
 
     #[doc = "Split orientation for sub-panes inside an edge-carved block."]
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -606,7 +606,7 @@
           "type": "string",
           "pattern": "^[A-Za-z0-9-_]+$"
         },
-        "size_percentage": {
+        "size": {
           "description": "Percentage of currently available space to allocate (0 to 100).",
           "type": "integer",
           "format": "uint16",
@@ -628,7 +628,7 @@
       "additionalProperties": false,
       "required": [
         "edge",
-        "size_percentage"
+        "size"
       ]
     },
     "LayoutDirection": {

@@ -58,7 +58,7 @@ pub fn compute_pane_geometries(
     let mut unassigned_container: Option<Rect> = None;
 
     for item in layout_items {
-        let percentage = item.size_percentage.min(100);
+        let percentage = item.size.min(100);
 
         let edge_direction = match item.edge {
             LayoutEdge::Left | LayoutEdge::Right => Direction::Horizontal,
@@ -97,7 +97,10 @@ pub fn compute_pane_geometries(
                 },
             };
 
-            let constraints: Vec<Constraint> = sub_splits.iter().map(|s| Constraint::Percentage(s.size)).collect();
+            let constraints: Vec<Constraint> = sub_splits
+                .iter()
+                .map(|s| Constraint::Percentage(s.size))
+                .collect();
 
             let sub_chunks = Layout::default()
                 .direction(split_direction)
@@ -141,14 +144,14 @@ pub fn compute_pane_geometries(
             }
         } else if item.unassigned.unwrap_or(false) {
             unassigned_container = Some(carved_area);
-        } else if let Some(ref title) = item.name {
-            let target = if title == "combined-logs" {
+        } else if let Some(ref name) = item.name {
+            let target = if name == "combined-logs" {
                 if include_combined_logs {
                     continue;
                 }
                 include_combined_logs = true;
                 Some(PaneTarget::CombinedLogs)
-            } else if let Some(pane) = panes.iter().find(|p| p.config.name == *title) {
+            } else if let Some(pane) = panes.iter().find(|p| p.config.name == *name) {
                 if assigned_panes.contains(&pane.id) {
                     continue;
                 }
