@@ -1,37 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
 schema_version: 1
 project:
-  name: "Project Dashboard"
-docker_networks:
-  hi: "172.18.23.0/24"
-vars:
-  target: "8.8.8.8"
-  flags: "-c 10"
-processes:
-  # 1. Shorthand string execution (defaults to type: "process", bash: false, mode: "log")
-  - name: "simple-ping"
-    run: "ping {{ target }} {{ flags }}"
-  # 2. Local Process with TUI display mode
-  - name: "system-monitor"
-    mode: "tui"
-    run:
-      type: "process"
-      cmd: "top"
-  # 3. Docker container execution
-  - name: "nginx-test"
-    run:
-      type: "docker"
-      image: "nginx:alpine"
-      opts: >
-        --name hi-nginx
-        --network hi
-        --ip 172.18.23.10
-      args: "nginx -g 'daemon off;'"
-  # 4. Namespace intrusion execution (defaults to the 'hi' network automatically)
-  - name: "google-dns-in-namespace"
-    link: "https://www.google.com"
-    run:
-      type: "docker-intrude"
-      ip: "172.18.23.100"
-      network: "hi"
-      cmd: "ping {{ target }} {{ flags }}"
+  name: "pinch"
+  tier: tier3
+  lifecycle: active
+  type: tool
