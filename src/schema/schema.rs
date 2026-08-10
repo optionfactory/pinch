@@ -136,7 +136,7 @@ pub enum ProjectType {
     Tool,
     #[doc = "Short-lived batch process, cron, or CI/CD script."]
     Job,
-    #[doc = "Infrastructure-as-Code (e.g., Terraform, OpenTofu, Pulumi, or Ansible blueprints)."]
+    #[doc = "Infrastructure-as-Code or IAC libraries (e.g., Terraform, OpenTofu, Pulumi, or Ansible blueprints)."]
     Infrastructure,
 }
 
@@ -248,49 +248,39 @@ pub enum Sensitivity {
 }
 
 #[doc = "Regulatory compliance and cybersecurity resilience specifications."]
-#[doc = ""]
-#[doc = "### Framework Applicability Guide"]
-#[doc = "* **`dora`:** EU financial sector & ICT third-party providers to finance."]
-#[doc = "* **`cra`:** Software products with digital elements sold/distributed in the EU."]
-#[doc = "* **`nis2`:** Critical/important non-financial infrastructure (energy, health, SaaS, MSPs)."]
-#[doc = "* **`aiact`:** Systems integrating AI/ML models, LLMs, or automated inference."]
-#[doc = "* **`gdpr`:** Any project processing, storing, or transmitting EU/EEA personal data."]
-#[doc = "* **`ads`:** Italian Garante Privacy governance for privileged IT/database administrators."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ComplianceManifest {
     #[doc = "DORA (Digital Operational Resilience Act) criticality tag."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "DoraCriticality")]
-    pub dora: Option<DoraCriticality>,
+    #[doc = "Applicable if your project serves the EU financial sector or acts as an ICT third-party provider to financial entities."]
+    pub dora: DoraCriticality,
 
     #[doc = "EU Cyber Resilience Act (CRA) product classification tier."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "CraClass")]
-    pub cra: Option<CraClass>,
+    #[doc = "Applicable if your software product contains digital elements and is sold or distributed within the EU."]
+    pub cra: CraClass,
 
     #[doc = "EU NIS2 Directive criticality classification."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "Nis2Category")]
-    pub nis2: Option<Nis2Category>,
+    #[doc = "Applicable to non-financial critical and important infrastructure operating in the EU (e.g., energy, health, SaaS, MSPs)."]
+    pub nis2: Nis2Category,
 
     #[doc = "EU AI Act risk classification tier."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "AiActClass")]
-    pub ai_act: Option<AiActClass>,
+    #[doc = "Applicable to systems integrating AI/ML models, LLMs, or automated inference."]
+    pub ai_act: AiActClass,
 
-    #[doc = "GDPR data protection role and data residency boundaries."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "GdprManifest")]
-    pub gdpr: Option<GdprManifest>,
+    #[doc = "GDPR data protection role."]
+    #[doc = "Applicable to any project that processes, stores, or transmits EU/EEA personal data."]
+    pub gdpr: GdprRole,
+
+    #[doc = "Whether personal data is processed or stored strictly within the EU/EEA."]
+    pub data_residency: DataResidency,
 
     #[doc = "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance block."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "AdsManifest")]
-    pub ads: Option<AdsManifest>,
+    #[doc = "Applicable to projects falling under the Italian Provvedimento Garante AdS for tracking privileged IT and database administrators."]
+    pub ads: AdsResponsibility,
 }
 
 #[doc = "EU NIS2 Directive classification tier for cybersecurity resilience."]
+#[doc = "Applicable to non-financial critical and important infrastructure operating in the EU (e.g., energy, health, SaaS, MSPs)."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
@@ -301,9 +291,12 @@ pub enum Nis2Category {
     ImportantEntity,
     #[doc = "Not in scope of NIS2 requirements."]
     OutOfScope,
+    #[doc = "Applicability has not yet been assessed."]
+    PendingAssessment,
 }
 
 #[doc = "EU AI Act risk classification tier."]
+#[doc = "Applicable to systems integrating AI/ML models, LLMs, or automated inference."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
@@ -316,21 +309,10 @@ pub enum AiActClass {
     LimitedRisk,
     #[doc = "Minimal or no risk AI system."]
     MinimalRisk,
-    #[doc = "Not an AI system; EU AI Act not applicable."]
-    NotApplicable,
-}
-
-#[doc = "General Data Protection Regulation (GDPR) architectural specification."]
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct GdprManifest {
-    #[doc = "Our organization's legal role regarding personal data in this project."]
-    pub role: GdprRole,
-
-    #[doc = "Whether personal data is processed or stored strictly within the EU/EEA."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "DataResidency")]
-    pub data_residency: Option<DataResidency>,
+    #[doc = "Not in scope of AI Act requirements."]
+    OutOfScope,
+    #[doc = "Applicability has not yet been assessed."]
+    PendingAssessment,
 }
 
 #[doc = "Geographic data storage and processing boundary for compliance."]
@@ -342,8 +324,14 @@ pub enum DataResidency {
     Eu,
     #[doc = "Data is stored and processed within the European Economic Area (EU + Iceland, Liechtenstein, Norway)."]
     Eea,
+    #[doc = "Data is stored or processed in the US."]
+    Us,
     #[doc = "Data is stored or processed globally across international regions."]
     Global,
+    #[doc = "No data is stored."]
+    NotApplicable,
+    #[doc = "Applicability has not yet been assessed."]
+    PendingAssessment,
 }
 
 #[doc = "Legal processing role under GDPR (Art. 4)."]
@@ -359,9 +347,14 @@ pub enum GdprRole {
     SubProcessor,
     #[doc = "No personal data processed."]
     None,
+    #[doc = "Not in scope of GRPR requirements."]
+    OutOfScope,
+    #[doc = "Applicability has not yet been assessed."]
+    PendingAssessment,
 }
 
 #[doc = "DORA (Digital Operational Resilience Act) operational criticality tag."]
+#[doc = "Applicable if your project serves the EU financial sector or acts as an ICT third-party provider to financial entities."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
@@ -370,9 +363,14 @@ pub enum DoraCriticality {
     CifSupported,
     #[doc = "Non-critical ICT supporting service or internal developer utility."]
     NonCritical,
+    #[doc = "Not in scope of DORA requirements."]
+    OutOfScope,
+    #[doc = "Applicability has not yet been assessed."]
+    PendingAssessment,
 }
 
 #[doc = "EU Cyber Resilience Act (CRA) product classification tier for cybersecurity compliance."]
+#[doc = "Applicable if your software product contains digital elements and is sold or distributed within the EU."]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 #[serde(deny_unknown_fields)]
@@ -385,29 +383,10 @@ pub enum CraClass {
     ImportantClass2,
     #[doc = "Critical: Smartcards, hardware security modules, and core cryptographic hardware/software."]
     Critical,
-}
-
-#[doc = "Italian Garante Privacy 'Amministratore di Sistema' (AdS) compliance specification."]
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct AdsManifest {
-    #[doc = "Responsibility boundary for System Administration (AdS) operations."]
-    pub responsibility: AdsResponsibility,
-
-    #[doc = "Immutable access log retention status (login/logout/failed attempts)."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "AdsLoggingStatus")]
-    pub logging: Option<AdsLoggingStatus>,
-
-    #[doc = "Whether formal designation letters ('Lettera di Nomina') have been executed."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(with = "bool")]
-    pub nominated: Option<bool>,
-
-    #[doc = "Date when the last annual verification/audit was completed (ISO 8601 format: YYYY-MM-DD)."]
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[schemars(schema_with = "iso_date_schema")]
-    pub latest_audit: Option<String>,
+    #[doc = "Not in scope of CRA requirements."]
+    OutOfScope,
+    #[doc = "Applicability has not yet been assessed."]
+    PendingAssessment,
 }
 
 #[doc = "System Administrator (AdS) operational responsibility boundary."]
@@ -421,25 +400,12 @@ pub enum AdsResponsibility {
     ExternalProcessor,
     #[doc = "The client / customer holds AdS responsibility for their own environment."]
     ClientManaged,
-    #[doc = "No AdS scope applies (no personal data processed or no privileged access)."]
-    NotApplicable,
-}
-
-#[doc = "Status of immutable AdS access log generation and retention."]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-#[serde(deny_unknown_fields)]
-pub enum AdsLoggingStatus {
-    #[doc = "Immutable access logs recorded and retained for at least 6 months (standard)."]
-    Immutable6Months,
-    #[doc = "Immutable access logs recorded and retained for at least 12 months (banking/health)."]
-    Immutable12Months,
-    #[doc = "Logging is enabled but not tamper-proof or integrity-verified."]
-    StandardLoggingOnly,
-    #[doc = "Access logging is delegated to external cloud/infrastructure provider."]
-    ExternalProvider,
-    #[doc = "Logging is not implemented or disabled."]
-    Disabled,
+    #[doc = "Status has not yet been assessed."]
+    PendingAssessment,
+    #[doc = "Not in scope of ADS requirements."]
+    OutOfScope,
+    #[doc = "Pending formal designation letters ('Lettera di Nomina') to be executed."]
+    PendingNomination,
 }
 
 #[doc = "Environment-specific deployment configuration."]
@@ -819,14 +785,6 @@ pub enum LayoutDirection {
 pub struct PinchAudit {
     pub project: ProjectManifest,
     pub containers: Vec<String>,
-}
-
-fn iso_date_schema(_generator: &mut SchemaGenerator) -> Schema {
-    let schema_val = serde_json::json!({
-        "type": "string",
-        "format": "date"
-    });
-    serde_json::from_value(schema_val).expect("valid schema")
 }
 
 fn schema_version_schema(_generator: &mut SchemaGenerator) -> Schema {
