@@ -44,3 +44,60 @@ pub fn apply_vars(text: &str, vars: &HashMap<String, String>, quote_spaces: bool
     result.push_str(rest);
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn vars(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+    }
+
+    #[test]
+    fn substitutes_known_var() {
+        let v = vars(&[("name", "acme")]);
+        assert_eq!(apply_vars("hello {{name}}!", &v, false), "hello acme!");
+    }
+
+    #[test]
+    fn leaves_unknown_var_verbatim() {
+        let v = vars(&[("name", "acme")]);
+        assert_eq!(apply_vars("hi {{missing}}", &v, false), "hi {{missing}}");
+    }
+
+    #[test]
+    fn trims_whitespace_around_key() {
+        let v = vars(&[("name", "acme")]);
+        assert_eq!(apply_vars("hi {{ name }}", &v, false), "hi acme");
+    }
+
+    #[test]
+    fn substitutes_multiple_vars_in_one_string() {
+        let v = vars(&[("a", "1"), ("b", "2")]);
+        assert_eq!(apply_vars("{{a}}-{{b}}", &v, false), "1-2");
+    }
+
+    #[test]
+    fn passes_through_text_without_placeholders() {
+        let v = vars(&[("a", "1")]);
+        assert_eq!(apply_vars("plain text", &v, false), "plain text");
+    }
+
+    #[test]
+    fn quotes_values_containing_spaces_when_requested() {
+        let v = vars(&[("dir", "/path with spaces")]);
+        assert_eq!(apply_vars("cd {{dir}}", &v, true), r#"cd "/path with spaces""#);
+    }
+
+    #[test]
+    fn does_not_quote_when_flag_disabled() {
+        let v = vars(&[("dir", "/path with spaces")]);
+        assert_eq!(apply_vars("cd {{dir}}", &v, false), "cd /path with spaces");
+    }
+
+    #[test]
+    fn leaves_unclosed_placeholder_verbatim() {
+        let v = vars(&[("a", "1")]);
+        assert_eq!(apply_vars("oops {{a", &v, false), "oops {{a");
+    }
+}
