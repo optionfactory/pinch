@@ -901,14 +901,14 @@
           "const": "tool"
         },
         {
-          "description": "Short-lived batch process, cron, or CI/CD script.",
-          "type": "string",
-          "const": "job"
-        },
-        {
           "description": "Infrastructure-as-Code or IAC libraries (e.g., Terraform, OpenTofu, Pulumi, or Ansible blueprints).",
           "type": "string",
           "const": "infrastructure"
+        },
+        {
+          "description": "Documentation, slides, courses.",
+          "type": "string",
+          "const": "documentation"
         }
       ]
     },

@@ -134,10 +134,10 @@ pub enum ProjectType {
     Service,
     #[doc = "CLI utility or internal developer tool."]
     Tool,
-    #[doc = "Short-lived batch process, cron, or CI/CD script."]
-    Job,
     #[doc = "Infrastructure-as-Code or IAC libraries (e.g., Terraform, OpenTofu, Pulumi, or Ansible blueprints)."]
     Infrastructure,
+    #[doc = "Documentation, slides, courses."]
+    Documentation,
 }
 
 #[doc = "Operational maintenance status of the repository."]
