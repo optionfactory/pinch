@@ -36,6 +36,63 @@ impl Viewport {
             }
         }
     }
+
+    /// Returns the start index of a tail viewport that fits `available_height`
+    /// rows when lines may wrap: walks backwards from the end, charging each
+    /// line for the number of rows its display width occupies.
+    pub fn wrapped_tail_start(widths: &[usize], available_height: usize, inner_width: usize) -> usize {
+        let mut rows = 0;
+        let mut start = widths.len();
+        while start > 0 {
+            let line_rows = wrapped_row_count(widths[start - 1], inner_width);
+            if rows + line_rows > available_height {
+                break;
+            }
+            rows += line_rows;
+            start -= 1;
+        }
+        start
+    }
+}
+
+fn wrapped_row_count(line_width: usize, inner_width: usize) -> usize {
+    if inner_width == 0 {
+        return 1;
+    }
+    line_width.div_ceil(inner_width).max(1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn short_lines_take_one_row_each() {
+        let start = Viewport::wrapped_tail_start(&[10, 10, 10], 3, 40);
+        assert_eq!(start, 0);
+    }
+
+    #[test]
+    fn wrapped_last_line_stays_visible() {
+        // 3 lines of width 80 in a 40-wide pane: the last line wraps to 2 rows.
+        // With naive line counting, height 3 would show all; with wrapped
+        // counting (2+1+1 = 4 rows > 3), the first line is dropped so the
+        // wrapped tail fits and remains fully visible.
+        let start = Viewport::wrapped_tail_start(&[80, 40, 80], 3, 40);
+        assert_eq!(start, 1);
+    }
+
+    #[test]
+    fn zero_height_shows_nothing() {
+        let start = Viewport::wrapped_tail_start(&[10, 10], 0, 40);
+        assert_eq!(start, 2);
+    }
+
+    #[test]
+    fn zero_width_lines_count_as_one_row() {
+        let start = Viewport::wrapped_tail_start(&[0, 0, 0], 2, 40);
+        assert_eq!(start, 1);
+    }
 }
 
 const COLOR_BORDER_ACTIVE: Color = Color::Rgb(122, 162, 247); // Electric Blue
@@ -72,12 +129,31 @@ fn draw_combined_logs(state: &DashboardState, frame: &mut Frame, area: Rect) {
         .max()
         .unwrap_or(0);
 
+    // In tail mode, lines may wrap and occupy multiple rows: recompute the
+    // viewport start so the wrapped tail always fits.
+    let slice_start = if state.global_view_top.is_none() {
+        let inner_width = area.width.saturating_sub(2) as usize;
+        let prefix_width = if state.show_combined_prefixes {
+            max_name_len + 3
+        } else {
+            0
+        };
+        let widths: Vec<usize> = state
+            .combined_logs
+            .iter()
+            .map(|(_, line)| line.width() + prefix_width)
+            .collect();
+        Viewport::wrapped_tail_start(&widths, inner_height, inner_width)
+    } else {
+        view.start
+    };
+
     let mut list_items = vec![];
     for (id, text_line) in state
         .combined_logs
         .iter()
-        .skip(view.start)
-        .take(view.end.saturating_sub(view.start))
+        .skip(slice_start)
+        .take(view.end.saturating_sub(slice_start))
     {
         let name = state
             .panes
@@ -224,11 +300,19 @@ fn draw_process_pane(state: &DashboardState, frame: &mut Frame, area: Rect, pane
             let total_logs = pane.logs.len();
             let view = Viewport::visible_range(total_logs, inner_height, pane.view_top_index);
 
+            let slice_start = if pane.log_mode == LogMode::Wrap && pane.view_top_index.is_none() {
+                let inner_width = area.width.saturating_sub(2) as usize;
+                let widths: Vec<usize> = pane.logs.iter().map(|line| line.width()).collect();
+                Viewport::wrapped_tail_start(&widths, inner_height, inner_width)
+            } else {
+                view.start
+            };
+
             let log_slice: Vec<Line> = pane
                 .logs
                 .iter()
-                .skip(view.start)
-                .take(view.end.saturating_sub(view.start))
+                .skip(slice_start)
+                .take(view.end.saturating_sub(slice_start))
                 .map(|line| {
                     let borrowed_spans: Vec<Span> = line
                         .spans
