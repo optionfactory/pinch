@@ -1,8 +1,5 @@
 // src/main.rs
-use pinch::cli::{
-    self, AuditCommand, CliAction, ConfigurationCommand, ContainerCommand, NetCommand, ProcessCommand, ProjectCommand,
-    Shell,
-};
+use pinch::cli::{self, CliAction, ConfigurationCommand, ContainerCommand, NetCommand, ProcessCommand, Shell};
 use pinch::config::{PinchManifest, RunMode};
 use pinch::networks;
 use pinch::processes;
@@ -38,12 +35,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let raw_config: PinchManifest =
         serde_saphyr::from_reader(reader).map_err(|e| format!("Failed to parse YAML config: {}", e))?;
     match parsed.action {
-        CliAction::Project(cmd) => match cmd {
-            ProjectCommand::Show { format } => {
-                cli::show_project(&raw_config, format)?;
-                return Ok(());
-            }
-        },
         CliAction::Configuration(cmd) => match cmd {
             ConfigurationCommand::Show { format } => {
                 cli::show_config(&raw_config, &parsed.vars, format)?;
@@ -54,12 +45,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
             ConfigurationCommand::Init => unreachable!(),
-        },
-        CliAction::Audit(cmd) => match cmd {
-            AuditCommand::Show { format } => {
-                cli::show_audit(&raw_config, &parsed.vars, format)?;
-                return Ok(());
-            }
         },
         CliAction::Process(cmd) => match cmd {
             ProcessCommand::Ls { format } => {

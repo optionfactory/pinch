@@ -10,7 +10,7 @@ use schemars::generate::SchemaSettings;
 mod schema;
 
 fn main() {
-    println!("cargo:rerun-if-changed=src/config/schema.rs");
+    println!("cargo:rerun-if-changed=src/schema/schema.rs");
     println!("cargo:rerun-if-changed=Cargo.toml");
 
     let full_version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "1.0.0".to_string());

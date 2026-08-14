@@ -1,8 +1,7 @@
 use crate::cli::{OutputFormat, format_command_args, render_list, render_map, render_object, render_single};
-use crate::config::{PinchManifest, ProjectManifest};
+use crate::config::PinchManifest;
 use crate::networks::build_docker_network_command;
 use crate::vars::apply_vars;
-use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 pub fn list_processes(manifest: &PinchManifest, format: Option<OutputFormat>) -> Result<(), String> {
@@ -33,10 +32,6 @@ pub fn show_vars(
         render_map(&sorted, format)?;
     }
     Ok(())
-}
-
-pub fn show_project(manifest: &PinchManifest, format: Option<OutputFormat>) -> Result<(), String> {
-    render_object(&manifest.project, format, OutputFormat::Yaml)
 }
 
 pub fn show_config(
@@ -136,19 +131,4 @@ pub fn list_images(
     let containers = used_containers(manifest, &context_vars)?;
     let images: Vec<String> = containers.into_iter().collect();
     render_list(&images, format)
-}
-
-#[derive(Debug, Serialize)]
-pub struct AuditReport<'a> {
-    pub project: &'a ProjectManifest,
-    pub containers: Vec<String>,
-}
-
-pub fn show_audit(
-    manifest: &PinchManifest,
-    _cli_vars: &HashMap<String, String>,
-    format: Option<OutputFormat>,
-) -> Result<(), String> {
-    let audit_report = manifest.audit();
-    render_object(&audit_report, format, OutputFormat::Json)
 }

@@ -57,25 +57,10 @@ pub enum Commands {
         #[command(subcommand)]
         command: ContainerSubcommand,
     },
-    #[command(about = "Inspect project metadata")]
-    Project {
-        #[command(subcommand)]
-        command: ProjectSubcommand,
-    },
     #[command(about = "Manage configuration files")]
     Configuration {
         #[command(subcommand)]
         command: ConfigurationSubcommand,
-    },
-    #[command(about = "Audit project metadata")]
-    Audit {
-        #[arg(
-            short = 'f',
-            long = "format",
-            help = "Output format (defaults to 'json')",
-            value_enum
-        )]
-        format: Option<OutputFormat>,
     },
     #[command(about = "Generate shell completion scripts")]
     Completion {
@@ -148,20 +133,6 @@ pub enum ContainerSubcommand {
 }
 
 #[derive(Subcommand, Debug)]
-pub enum ProjectSubcommand {
-    #[command(about = "Show the project metadata block")]
-    Show {
-        #[arg(
-            short = 'f',
-            long = "format",
-            help = "Output format (defaults to 'yaml')",
-            value_enum
-        )]
-        format: Option<OutputFormat>,
-    },
-}
-
-#[derive(Subcommand, Debug)]
 pub enum ConfigurationSubcommand {
     #[command(about = "Generate a default configuration file in the current directory")]
     Init,
@@ -224,11 +195,6 @@ pub enum ContainerCommand {
 }
 
 #[derive(Debug)]
-pub enum ProjectCommand {
-    Show { format: Option<OutputFormat> },
-}
-
-#[derive(Debug)]
 pub enum ConfigurationCommand {
     Init,
     Show {
@@ -238,11 +204,6 @@ pub enum ConfigurationCommand {
         name: Option<String>,
         format: Option<OutputFormat>,
     },
-}
-
-#[derive(Debug)]
-pub enum AuditCommand {
-    Show { format: Option<OutputFormat> },
 }
 
 #[derive(ValueEnum, Clone, Debug)]
@@ -258,9 +219,7 @@ pub enum CliAction {
     Process(ProcessCommand),
     Networks(NetCommand),
     Containers(ContainerCommand),
-    Project(ProjectCommand),
     Configuration(ConfigurationCommand),
-    Audit(AuditCommand),
     Completion(Shell),
 }
 
@@ -312,12 +271,6 @@ pub fn parse_args() -> ParsedCli {
             };
             CliAction::Containers(cmd)
         }
-        Some(Commands::Project { command }) => {
-            let cmd = match command {
-                ProjectSubcommand::Show { format } => ProjectCommand::Show { format },
-            };
-            CliAction::Project(cmd)
-        }
         Some(Commands::Configuration { command }) => {
             let cmd = match command {
                 ConfigurationSubcommand::Init => ConfigurationCommand::Init,
@@ -326,7 +279,6 @@ pub fn parse_args() -> ParsedCli {
             };
             CliAction::Configuration(cmd)
         }
-        Some(Commands::Audit { format }) => CliAction::Audit(AuditCommand::Show { format }),
         Some(Commands::Completion { shell }) => CliAction::Completion(shell),
     };
 

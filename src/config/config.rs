@@ -54,7 +54,7 @@ impl PinchManifest {
             ));
         }
         let context_vars = self.resolve_vars(&cli_vars);
-        let name = self.project.name.clone();
+        let name = self.name.clone();
         let global_shell = self.shell;
         let global_auto_start = self.auto_start;
         let global_auto_restart = self.auto_restart;

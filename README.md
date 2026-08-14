@@ -1,24 +1,25 @@
 # Pinch
 
-**The Executable Service Manifest & DevSecOps Supervisor**
+**The Executable Workflow Manifest & Process Supervisor**
 
-Pinch is a terminal-based process supervisor, developer workflow runner, and declarative governance catalog.
+Pinch is a terminal-based process supervisor and developer workflow runner.
 
-Most software projects suffer from a fundamental disconnect between runtime execution and governance: traditional process runners know how to execute code but ignore ownership, data classification, and SLAs, while enterprise compliance portals capture regulatory metadata in disconnected silos that developers rarely visit after onboarding. Pinch solves this with an executable service manifest (`pinch.yaml`). The exact same file that supervises your local development background daemons, Docker namespaces, and interactive TUI tasks also serves as your repository's authoritative code contract for operational tiers, data sensitivity, and regulatory applicability.
+Most software projects juggle a scattered collection of scripts, Makefile targets, and ad-hoc terminal tabs to run their local development environment. Pinch solves this with an executable workflow manifest (`pinch.yaml`). A single file supervises your local development background daemons, Docker namespaces, and interactive TUI tasks.
 
-## A Single Source of Truth for Cross-Functional Teams
+## A Single Source of Truth for Development Workflows
 
-By uniting runtime supervision with **declarative governance**, Pinch creates a single source of truth that keeps three critical aspects of your software contract aligned without creating metadata rot:
+Pinch creates a single source of truth that keeps your development environment aligned:
 
 * **Local Execution & Workflows:** Zero-friction runtime supervision managing multi-process TUIs, Docker namespaces, file watching, and log tailing in one terminal command (`pinch tui`).
-* **Operational Standards & SLAs:** Explicit code contracts for service tiers (`tier1` to `tier4`), lifecycle status, environment exposures, and container dependencies enforced across repositories.
-* **Regulatory Governance & Tracking:** European and Italian compliance applicability (DORA, NIS2, CRA, EU AI Act, GDPR, Garante AdS) tracked alongside code and structurally validated in CI pipelines (`pinch audit`).
+* **Declarative Configuration:** Processes, Docker networks, and dashboard layouts declared once and validated via JSON Schema in your IDE.
 
-Because `pinch.yaml` powers the daily development environment, architecture and governance metadata never go stale, if the manifest breaks, local development breaks.
+Because `pinch.yaml` powers the daily development environment, the manifest never goes stale, if the manifest breaks, local development breaks.
+
+> **Governance & compliance:** Project metadata such as service tiers, lifecycle status, and regulatory applicability (DORA, NIS2, CRA, EU AI Act, GDPR, Garante AdS) is tracked in a separate `elaine.yaml` manifest owned by [elaine](https://github.com/optionfactory/elaine), which aggregates and audits it across your organization's repositories.
 
 ## Zero-Config IDE Linting
 
-To enable autocompletion, schema validation, and regulatory applicability tooltips in VS Code, Neovim (`yamlls`), or JetBrains without any IDE configuration, add this comment as the first line of your `pinch.yaml`:
+To enable autocompletion and schema validation in VS Code, Neovim (`yamlls`), or JetBrains without any IDE configuration, add this comment as the first line of your `pinch.yaml`:
 
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
@@ -26,7 +27,7 @@ To enable autocompletion, schema validation, and regulatory applicability toolti
 
 ## Security & Trust Model
 
-Pinch is a local process supervisor, developer workflow runner, and declarative governance catalog. To evaluate Pinch securely, its trust model and execution boundaries must be understood:
+Pinch is a local process supervisor and developer workflow runner. To evaluate Pinch securely, its trust model and execution boundaries must be understood:
 
 ### 1. The User is the Security Boundary
 Pinch runs locally under the permissions of the invoking user. It does not introduce an elevated daemon, network service, or multi-tenant boundary. If a user executes `pinch` on their workstation or in a CI/CD pipeline, processes spawn with that user's existing OS privileges and environment variables.
@@ -38,9 +39,6 @@ A `pinch.yaml` manifest is explicitly designed to execute arbitrary shell comman
 
 ### 3. Docker & Privilege Passthrough
 When using `type: "docker"` or `type: "docker-intrude"`, Pinch passes configured flags (`opts`, `args`, `--privileged`, `--net=host`, etc.) directly to the Docker daemon. Pinch does not block or deny-list valid Docker flags, as local development and namespace inspection frequently require host-level access. Security boundaries for container execution must be enforced at the Docker daemon or OS level.
-
-### 4. Scope of "Compliance-as-Code"
-The compliance and regulatory metadata blocks (`dora`, `cra`, `nis2`, `ai_act`, `gdpr`, and `ads`) are authoritative declarative governance records. They allow cross-functional teams to assert operational SLAs and regulatory applicability directly alongside runtime definitions. `pinch audit` verifies structural validity and outputs structured reporting—it is not an automated static analysis engine that legally certifies software resilience or privacy compliance.
 
 ## Installation
 
@@ -112,15 +110,12 @@ pinch
 │   ├── init                  Generate a default pinch.yaml file
 │   ├── show                  Print the parsed, variable-expanded configuration
 │   └── var [NAME]            Inspect resolved configuration variables
-├── project
-│   └── show                  Show the project metadata block
 ├── networks
 │   ├── ls (list)             List all Docker networks defined in the config
 │   ├── show [NAME]           Show the 'docker network create' command
 │   └── create [NAME]         Create a Docker network (or all defined networks)
 ├── containers
 │   └── ls (list)             List all unique Docker images used in the config
-├── audit                     Inspect project metadata, compliance rules, and container dependencies
 └── completion <SHELL>        Generate shell completion scripts (bash, zsh, fish)
 ```
 
@@ -152,10 +147,6 @@ pinch
 pinch container ls | xargs -r -n1 docker pull
 ```
 
-### Audit (`pinch audit`)
-
-* **`pinch audit [-f, --format <FORMAT>]`**: Prints structured audit metadata combining project identification, governance tiers, regulatory compliance, and resolved container dependencies (defaults to `json`).
-
 ### Shell Completions (`pinch completion`)
 
 * **`pinch completion <SHELL>`**: Supports `bash`, `zsh`, and `fish`.
@@ -167,7 +158,7 @@ source <(pinch completion bash)
 
 ## Multi-Format Inspection (`-f, --format`)
 
-The `process show`, `process ls`, `config show`, `config var`, `net show`, `net ls`, `container ls`, and `audit` commands support multiple output formats via `-f, --format <FORMAT>`.
+The `process show`, `process ls`, `config show`, `config var`, `net show`, `net ls`, and `container ls` commands support multiple output formats via `-f, --format <FORMAT>`.
 
 | Format | Output Style | Best Suited For |
 | :--- | :--- | :--- |
@@ -179,8 +170,7 @@ The `process show`, `process ls`, `config show`, `config var`, `net show`, `net 
 > **Smart Defaults:**
 > * **`ls` subcommands** default to **`raw`** (flat line-by-line output) for easy shell composition.
 > * **`show [ITEM]`** defaults to **`raw`** when querying a single item (`pinch config var target`), or **`yaml`** when inspecting all items (`pinch config var`).
-> * **Structural commands** (`config show`, `project show`) default to **`yaml`**.
-> * **`audit`** defaults to **`json`**.
+> * **Structural commands** (`config show`) default to **`yaml`**.
 
 
 ## Variable Overrides & Precedence
@@ -268,7 +258,7 @@ Configuration is defined in YAML. You can define global variables, default behav
 | Setting | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `schema_version` | Integer | *Required* | Explicit manifest schema version (must be `1`). |
-| `project` | Object | *Required* | High-level project metadata (`name`, `type`, `tier`, `lifecycle`, `stewards`, `compliance`, `auth`). |
+| `name` | String | *Required* | Name of the project. |
 | `vars` | Map | `{}` | Custom variables (e.g., `env: "dev"`). Built-ins: `{{pwd}}`, `{{user}}`, `{{home}}`. |
 | `logs_max_size` | Integer | *None* | Maximum number of log lines to retain in memory per pane. |
 | `shell` | Enum | *None* | If present, executes commands using the specified shell `-c` option globally (`bash`, `zsh`, `fish`). |
@@ -276,73 +266,6 @@ Configuration is defined in YAML. You can define global variables, default behav
 | `auto_restart` | Boolean | `true` | Whether processes restart automatically if they exit. |
 | `grace_period` | Integer | `3000` | Delay in milliseconds before auto-restarting a process. |
 | `watch_settle_time_ms` | Integer | `800` | Debounce delay in milliseconds when watching files for changes. |
-
-### Project Metadata & Governance (`project:`)
-
-The `project` block defines ownership, operational SLAs, security posture, and regulatory compliance rules:
-
-```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
-schema_version: 1
-project:
-  name: "Fraud AI Analyzer"
-  type: service               # library | service | tool | job | infrastructure
-  lifecycle: active           # active | maintenance | deprecated | end-of-life | prototype
-  tier: tier1                 # tier1 (24/7 SLA) -> tier4 (experimental)
-  commissioner: "Acme Financial Services SpA"
-  channel: "Global Enterprise Integrators Srl"
-  stewards:
-    - "mario.rossi@example.com"
-  authentication:
-    - jwt
-    - mtls
-    - passkey
-  sensitivity:
-    - pii
-    - financial
-  compliance:
-    dora: cif-supported       # EU Digital Operational Resilience Act
-    cra: important-class-2    # EU Cyber Resilience Act
-    nis2: essential-entity    # EU NIS2 Critical Infrastructure
-    ai_act: high-risk         # EU AI Act risk classification
-    gdpr:
-      role: processor
-      data_residency: eu
-    ads:                      # Italian Garante Privacy 'Amministratore di Sistema'
-      responsibility: internal
-      logging: immutable-12-months
-      nominated: true
-      latest_audit: "2026-02-10"
-  environments:
-    - name: "prod-aws"
-      type: production
-      platform: cloud         # cloud | datacenter | on-premises | colocation | hybrid | edge
-      ownership:              # infrastructure | operating-system | services | applications
-        - services
-        - applications
-      ingress: restricted-ip
-      management: restricted-pam
-      dns: managed # managed | external
-      domains:
-        - api.internal.org
-        - app.internal.org
-      certificates: managed-acme-dns01 # managed-acme-dns01 | managed-acme-http01 | managed-auto-renew | managed-manual | third-party-provided | third-party-managed | not-applicable
-```
-
-#### Governance & Regulatory Standards Covered
-
-* **Schema Version (`schema_version`):** Enforces explicit manifest structure versioning (must be `1`).
-* **Ownership & References (`stewards`, `commissioner`, `channel`):** Identifies internal subject matter experts/caretakers (`stewards`), paying clients/entities (`commissioner`), and channel partners or system integrators (`channel`).
-* **Service Tiers (`tier`):** Maps internal operational priority (`tier1` critical path down to `tier4` prototype).
-* **Data Sensitivity (`sensitivity`):** Classifies assets handled by the project (`public`, `internal`, `confidential`, `restricted`, `pii`, `spi`, `biometric`, `pci`, `financial`, `phi`).
-* **European Regulatory Mappings (`compliance`):**
-  * **`dora`:** Tracks whether the project supports a Critical or Important Function (`cif-supported` / `non-critical`) under EU financial resilience rules.
-  * **`cra`:** Maps Cyber Resilience Act classes (`default`, `important-class1`, `important-class-2`, `critical`).
-  * **`nis2`:** Non-financial critical infrastructure entities (`essential-entity`, `important-entity`, `out-of-scope`).
-  * **`ai_act`:** Enforces EU AI Act risk classifications (`high-risk`, `general-purpose-ai`, `limited-risk`, `minimal-risk`, `not-applicable`).
-  * **`gdpr`:** Explicitly captures legal processing roles (`controller`, `processor`, `sub-processor`) and geographic data residency boundaries (`eu`, `eea`, `global`).
-  * **`ads`:** Italian Data Protection (*Provvedimento Garante AdS*) governance tracking system administrators, immutable access log retention (`immutable-6-months` / `immutable-12-months`), formal appointment designation (`nominated: true`), and annual audit dates (`latest_audit: "YYYY-MM-DD"`).
-* **Environment Profiles (`environments`):** Structured list supporting named deployment environments, hosting platforms (`platform`), stack layer boundaries (`ownership`), domain ownership (`dns`), assigned hostnames (`domains`), TLS certificate lifecycle controls (`certificates`), and segregated network reachability (`ingress` and `management`).
 
 ### Docker Networks
 
@@ -389,46 +312,7 @@ Each item under `processes` defines a process to supervise:
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
 schema_version: 1
-project:
-  name: "Fraud-Detection-Service"
-  type: service
-  lifecycle: active
-  tier: tier1
-  commissioner: "Acme Financial Services SpA"
-  channel: "Global Enterprise Integrators Srl"
-  stewards:
-    - "mario.rossi@company.com"
-  authentication:
-    - mtls
-    - jwt
-    - passkey
-  sensitivity:
-    - pii
-    - financial
-  compliance:
-    dora: cif-supported
-    ai_act: high-risk
-    gdpr:
-      role: processor
-      data_residency: eu
-    ads:
-      responsibility: internal
-      logging: immutable-12-months
-      nominated: true
-      latest_audit: "2026-02-10"
-  environments:
-    - name: "production"
-      type: production
-      platform: cloud
-      ownership:
-        - services
-        - applications
-      ingress: restricted-ip
-      management: restricted-pam
-      dns: managed
-      certificates: managed-acme-dns01
-      domains:
-        - api.internal.org
+name: "Fraud-Detection-Service"
 docker_networks:
   hi: "172.18.23.0/24"
 vars:
@@ -557,9 +441,7 @@ layout:
 
 ```yaml
 schema_version: 1
-project:
-  name: "MyProject"
-  type: service
+name: "MyProject"
 processes:
   - name: "system-monitor"
     run: "top"
