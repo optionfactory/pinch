@@ -150,7 +150,7 @@ pub enum RunManifest {
 pub enum RunKind {
     #[doc = "Spawns a standard local OS process."]
     Process(ProcessRunConfig),
-    #[doc = "Spawns a managed Docker container using `docker run --rm`."]
+    #[doc = "Spawns a managed container using `docker run --rm` (or `podman run --rm` via `engine`)."]
     Docker(DockerRunConfig),
     #[doc = "Spawns a local host binary attached inside a Docker bridge network namespace (`docker-intrude`)."]
     DockerIntrude(DockerIntrudeRunConfig),
@@ -168,13 +168,26 @@ pub struct ProcessRunConfig {
     pub cmd: String,
 }
 
-#[doc = "Configuration for executing a Docker container."]
+#[doc = "Container engine binary used to spawn a container."]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[serde(deny_unknown_fields)]
+pub enum ContainerEngine {
+    Docker,
+    Podman,
+}
+
+#[doc = "Configuration for executing a container (same shape as the `container` block of `optionfactory.services.bundle`)."]
 #[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DockerRunConfig {
-    #[doc = "The Docker image reference to run."]
+    #[doc = "Container engine used to run the image (`docker` or `podman`, default `docker`)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "ContainerEngine")]
+    pub engine: Option<ContainerEngine>,
+    #[doc = "The container image reference to run."]
     pub image: String,
-    #[doc = "Arguments passed to `docker run --rm` (e.g., `--name`, `--network`, `--ip`)."]
+    #[doc = "Raw flags appended verbatim to the engine run command, after the rendered ones."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub opts: Option<String>,
@@ -182,6 +195,54 @@ pub struct DockerRunConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
     pub args: Option<String>,
+    #[doc = "Network to attach the container to (rendered as `--network`, empty values ignored)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
+    pub network: Option<String>,
+    #[doc = "Static IP address assigned to the container on the bridge network (rendered as `--ip`, empty values ignored)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
+    pub ip: Option<String>,
+    #[doc = "Environment variables passed to the container (a `KEY: value` mapping, rendered as `--env`)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "HashMap<String, String>")]
+    pub env: Option<HashMap<String, String>>,
+    #[doc = "Ports published to the host (rendered as `-p`, empty entries ignored)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<String>")]
+    pub publish: Option<Vec<String>>,
+    #[doc = "Mounts attached to the container (rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,<opts>]`)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<DockerMountConfig>")]
+    pub mounts: Option<Vec<DockerMountConfig>>,
+    #[doc = "Volumes attached to the container (rendered as `--volume`, empty entries ignored)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<String>")]
+    pub volumes: Option<Vec<String>>,
+}
+
+#[doc = "Configuration for a single container mount."]
+#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DockerMountConfig {
+    #[doc = "Mount type (default `bind`)."]
+    #[serde(rename = "type", default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
+    pub mount_type: Option<String>,
+    #[doc = "Source path of the mount."]
+    pub source: String,
+    #[doc = "Target path inside the container (defaults to `source`)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
+    pub target: Option<String>,
+    #[doc = "Whether the mount is readonly (default `true`)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
+    pub readonly: Option<bool>,
+    #[doc = "Comma-separated extra mount options appended verbatim (e.g., `bind-propagation=rshared`)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "String")]
+    pub opts: Option<String>,
 }
 
 #[doc = "Configuration for executing a host binary inside a Docker network namespace."]

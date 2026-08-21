@@ -1,13 +1,13 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/optionfactory/pinch/refs/heads/master/schema/pinch-v1.schema.json
 schema_version: 1
-name: "Pinch Project"
+name: pinch-project
 vars:
   env: "dev"
 processes:
-  - name: "backend"
+  - name: backend
     cwd: "{{pwd}}/backend"
-    run: "cargo run"
-  - name: "frontend"
-    mode: "tui"
+    run: cargo run
+  - name: frontend
+    mode: tui
     cwd: "{{ pwd }}/frontend"
-    run: "npm run dev"
+    run: npm run dev

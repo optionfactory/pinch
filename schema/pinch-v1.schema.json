@@ -79,6 +79,44 @@
     "name"
   ],
   "$defs": {
+    "ContainerEngine": {
+      "description": "Container engine binary used to spawn a container.",
+      "type": "string",
+      "enum": [
+        "docker",
+        "podman"
+      ]
+    },
+    "DockerMountConfig": {
+      "description": "Configuration for a single container mount.",
+      "type": "object",
+      "properties": {
+        "opts": {
+          "description": "Comma-separated extra mount options appended verbatim (e.g., `bind-propagation=rshared`).",
+          "type": "string"
+        },
+        "readonly": {
+          "description": "Whether the mount is readonly (default `true`).",
+          "type": "boolean"
+        },
+        "source": {
+          "description": "Source path of the mount.",
+          "type": "string"
+        },
+        "target": {
+          "description": "Target path inside the container (defaults to `source`).",
+          "type": "string"
+        },
+        "type": {
+          "description": "Mount type (default `bind`).",
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "source"
+      ]
+    },
     "DockerNetworkConfig": {
       "description": "Configuration for creating a Docker bridge network.",
       "anyOf": [
@@ -326,24 +364,64 @@
           ]
         },
         {
-          "description": "Spawns a managed Docker container using `docker run --rm`.",
+          "description": "Spawns a managed container using `docker run --rm` (or `podman run --rm` via `engine`).",
           "type": "object",
           "properties": {
             "args": {
               "description": "Arguments passed to the container's entrypoint.",
               "type": "string"
             },
+            "engine": {
+              "description": "Container engine used to run the image (`docker` or `podman`, default `docker`).",
+              "$ref": "#/$defs/ContainerEngine"
+            },
+            "env": {
+              "description": "Environment variables passed to the container (a `KEY: value` mapping, rendered as `--env`).",
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
             "image": {
-              "description": "The Docker image reference to run.",
+              "description": "The container image reference to run.",
+              "type": "string"
+            },
+            "ip": {
+              "description": "Static IP address assigned to the container on the bridge network (rendered as `--ip`, empty values ignored).",
+              "type": "string"
+            },
+            "mounts": {
+              "description": "Mounts attached to the container (rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,<opts>]`).",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/DockerMountConfig"
+              }
+            },
+            "network": {
+              "description": "Network to attach the container to (rendered as `--network`, empty values ignored).",
               "type": "string"
             },
             "opts": {
-              "description": "Arguments passed to `docker run --rm` (e.g., `--name`, `--network`, `--ip`).",
+              "description": "Raw flags appended verbatim to the engine run command, after the rendered ones.",
               "type": "string"
+            },
+            "publish": {
+              "description": "Ports published to the host (rendered as `-p`, empty entries ignored).",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             },
             "type": {
               "type": "string",
               "const": "docker"
+            },
+            "volumes": {
+              "description": "Volumes attached to the container (rendered as `--volume`, empty entries ignored).",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           "additionalProperties": false,

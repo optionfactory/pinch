@@ -292,10 +292,16 @@ Each item under `processes` defines a process to supervise:
   * **Process (`type: "process"`)**:
     * `cmd`: The command string to execute.
     * `shell`: Optional shell override (`bash`, `zsh`, `fish`). Runs the command using `shell -c`.
-  * **Docker (`type: "docker"`)**:
-    * `image`: The Docker image to run.
-    * `opts`: Arguments passed to `docker run --rm` (`--name`, `--network`, `--ip`, etc.).
-    * `args`: Arguments passed to the container entrypoint.
+   * **Docker (`type: "docker"`)**: Mirrors the `container` block of `optionfactory.services.bundle`.
+     * `engine`: `docker` (default) or `podman`.
+     * `image`: The container image to run.
+     * `network`, `ip`: Rendered as `--network`/`--ip`; empty values are ignored (enabling conditionals that yield empty strings).
+     * `env`: A `KEY: value` mapping, rendered as `--env`.
+     * `publish`: A list rendered as `-p`; empty entries are ignored.
+     * `mounts`: A list rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,<opts>]`. Each entry supports `type` (default `bind`), `source` (mandatory), `target` (defaults to `source`), `readonly` (default `true`), and `opts` (comma-separated extra mount options appended verbatim, e.g. `bind-propagation=rshared`).
+     * `volumes`: A list rendered as `--volume`; empty entries are ignored.
+     * `opts`: Raw flags appended verbatim after the rendered ones (e.g. `--name`, `--privileged`).
+     * `args`: Arguments passed to the container entrypoint.
   * **Docker Intrude (`type: "docker-intrude"`)**:
     * `ip`: The target IP address in the network namespace.
     * `network`: (Optional if only one network is defined in `docker_networks`) The Docker network name.
@@ -330,10 +336,16 @@ processes:
     run:
       type: "docker"
       image: "nginx:alpine"
-      opts: >
-        --name hi-nginx
-        --network hi
-        --ip 172.18.23.10
+      network: "hi"
+      ip: "172.18.23.10"
+      env:
+        TZ: "Europe/Rome"
+      publish:
+        - "0.0.0.0:8888:8888"
+      mounts:
+        - source: "/opt/myapp/nginx/nginx.conf"
+          target: "/etc/nginx/nginx.conf"
+      opts: "--name hi-nginx"
       args: "nginx -g 'daemon off;'"
   - name: "google-ping"
     link: "https://www.google.com"
