@@ -72,13 +72,31 @@ impl RunBuilder for DockerRunConfig {
             if ctx.background { "-d" } else { "-ti" }.to_string(),
             "--rm".to_string(),
         ];
-        for (flag, value) in [("--network", &self.network), ("--ip", &self.ip)] {
-            if let Some(value) = value {
-                let expanded = expand(value, ctx.vars);
-                if !expanded.is_empty() {
-                    tokens.push(flag.to_string());
-                    tokens.push(expanded);
-                }
+        // Mirrors bundle: the enclosing process name doubles as the container name,
+        // unless overridden explicitly.
+        let container_name = self
+            .name
+            .as_deref()
+            .map(|n| expand(n, ctx.vars))
+            .filter(|n| !n.is_empty())
+            .unwrap_or_else(|| ctx.name.to_string());
+        tokens.push("--name".to_string());
+        tokens.push(container_name);
+        // Same defaulting as 'docker-intrude': fall back to the single network
+        // defined in 'docker_networks' when no explicit network is configured.
+        let network = self.network.as_deref().or(ctx.default_docker_network.map(String::as_str));
+        if let Some(network) = network {
+            let expanded = expand(network, ctx.vars);
+            if !expanded.is_empty() {
+                tokens.push("--network".to_string());
+                tokens.push(expanded);
+            }
+        }
+        if let Some(ip) = &self.ip {
+            let expanded = expand(ip, ctx.vars);
+            if !expanded.is_empty() {
+                tokens.push("--ip".to_string());
+                tokens.push(expanded);
             }
         }
         if let Some(env) = &self.env {
@@ -139,6 +157,32 @@ mod tests {
         }
     }
 
+    #[test]
+    fn defaults_to_single_defined_docker_network() {
+        let vars = HashMap::new();
+        let default_network = "hi".to_string();
+        let networks = HashMap::new();
+        let context = RunContext {
+            name: "test",
+            vars: &vars,
+            global_shell: None,
+            default_docker_network: Some(&default_network),
+            defined_networks: &networks,
+            background: false,
+        };
+        let cfg = docker_cfg(r#"{ "image": "i" }"#);
+        let out = cfg.build_command(&context).unwrap().cmd;
+        assert_eq!(out, vec!["docker", "run", "-ti", "--rm", "--name", "test", "--network", "hi", "i"]);
+
+        // An explicit network takes precedence over the default.
+        let cfg = docker_cfg(r#"{ "image": "i", "network": "other" }"#);
+        let out = cfg.build_command(&context).unwrap().cmd;
+        assert_eq!(
+            out,
+            vec!["docker", "run", "-ti", "--rm", "--name", "test", "--network", "other", "i"]
+        );
+    }
+
     fn docker_cfg(json: &str) -> DockerRunConfig {
         serde_json::from_str(json).expect("valid docker run config")
     }
@@ -148,7 +192,18 @@ mod tests {
         let vars = HashMap::new();
         let cfg = docker_cfg(r#"{ "image": "nginx:alpine" }"#);
         let out = cfg.build_command(&ctx(&vars)).unwrap();
-        assert_eq!(out.cmd, vec!["docker", "run", "-ti", "--rm", "nginx:alpine"]);
+        assert_eq!(
+            out.cmd,
+            vec!["docker", "run", "-ti", "--rm", "--name", "test", "nginx:alpine"]
+        );
+    }
+
+    #[test]
+    fn uses_explicit_container_name_when_provided() {
+        let vars = HashMap::new();
+        let cfg = docker_cfg(r#"{ "image": "i", "name": "hi-nginx" }"#);
+        let out = cfg.build_command(&ctx(&vars)).unwrap().cmd;
+        assert_eq!(&out[4..6], &["--name", "hi-nginx"]);
     }
 
     #[test]
@@ -157,6 +212,7 @@ mod tests {
         let cfg = docker_cfg(
             r#"{
                 "image": "nginx:alpine",
+                "name": "hi-nginx",
                 "network": "hi",
                 "ip": "172.18.23.10",
                 "env": { "TZ": "Europe/Rome", "A": "1" },
@@ -166,7 +222,7 @@ mod tests {
                     { "type": "volume", "source": "data", "target": "/data", "readonly": false, "opts": "ro-copy" }
                 ],
                 "volumes": ["mydata:/var/lib/app", ""],
-                "opts": "--name hi-nginx",
+                "opts": "--log-driver=none",
                 "args": "nginx -g 'daemon off;'"
             }"#,
         );
@@ -178,6 +234,8 @@ mod tests {
                 "run",
                 "-ti",
                 "--rm",
+                "--name",
+                "hi-nginx",
                 "--network",
                 "hi",
                 "--ip",
@@ -194,8 +252,7 @@ mod tests {
                 "type=volume,source=data,target=/data,ro-copy",
                 "--volume",
                 "mydata:/var/lib/app",
-                "--name",
-                "hi-nginx",
+                "--log-driver=none",
                 "nginx:alpine",
                 "nginx",
                 "-g",
@@ -218,8 +275,11 @@ mod tests {
         vars.insert("net".to_string(), String::new());
         vars.insert("img".to_string(), "nginx:alpine".to_string());
         let cfg = docker_cfg(r#"{ "image": "{{img}}", "network": "{{net}}", "ip": " {{net}} " }"#);
-        let out = cfg.build_command(&ctx(&vars)).unwrap();
-        assert_eq!(out.cmd, vec!["docker", "run", "-ti", "--rm", "nginx:alpine"]);
+        let out = cfg.build_command(&ctx(&vars)).unwrap().cmd;
+        assert_eq!(
+            out,
+            vec!["docker", "run", "-ti", "--rm", "--name", "test", "nginx:alpine"]
+        );
     }
 
     #[test]
@@ -237,7 +297,22 @@ mod tests {
         let vars: HashMap<String, String> = HashMap::new();
         let cfg = docker_cfg(r#"{ "image": "i", "ip": "10.0.0.2", "network": "net1" }"#);
         let out = cfg.build_command(&ctx(&vars)).unwrap().cmd;
-        assert_eq!(out, vec!["docker", "run", "-ti", "--rm", "--network", "net1", "--ip", "10.0.0.2", "i"]);
+        assert_eq!(
+            out,
+            vec![
+                "docker",
+                "run",
+                "-ti",
+                "--rm",
+                "--name",
+                "test",
+                "--network",
+                "net1",
+                "--ip",
+                "10.0.0.2",
+                "i"
+            ]
+        );
     }
 
     #[test]

@@ -397,6 +397,11 @@
                 "$ref": "#/$defs/DockerMountConfig"
               }
             },
+            "name": {
+              "description": "Container name passed as `--name` (defaults to the enclosing process name).",
+              "type": "string",
+              "pattern": "^[A-Za-z0-9-_]+$"
+            },
             "network": {
               "description": "Network to attach the container to (rendered as `--network`, empty values ignored).",
               "type": "string"

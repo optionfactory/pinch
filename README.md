@@ -294,8 +294,9 @@ Each item under `processes` defines a process to supervise:
     * `shell`: Optional shell override (`bash`, `zsh`, `fish`). Runs the command using `shell -c`.
    * **Docker (`type: "docker"`)**: Mirrors the `container` block of `optionfactory.services.bundle`.
      * `engine`: `docker` (default) or `podman`.
+     * `name`: Container name passed as `--name` (defaults to the enclosing process name).
      * `image`: The container image to run.
-     * `network`, `ip`: Rendered as `--network`/`--ip`; empty values are ignored (enabling conditionals that yield empty strings).
+     * `network`, `ip`: Rendered as `--network`/`--ip`; empty values are ignored (enabling conditionals that yield empty strings). If `network` is omitted and exactly one network is defined in `docker_networks`, that network is used automatically (same as `docker-intrude`).
      * `env`: A `KEY: value` mapping, rendered as `--env`.
      * `publish`: A list rendered as `-p`; empty entries are ignored.
      * `mounts`: A list rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,<opts>]`. Each entry supports `type` (default `bind`), `source` (mandatory), `target` (defaults to `source`), `readonly` (default `true`), and `opts` (comma-separated extra mount options appended verbatim, e.g. `bind-propagation=rshared`).
@@ -345,7 +346,6 @@ processes:
       mounts:
         - source: "/opt/myapp/nginx/nginx.conf"
           target: "/etc/nginx/nginx.conf"
-      opts: "--name hi-nginx"
       args: "nginx -g 'daemon off;'"
   - name: "google-ping"
     link: "https://www.google.com"

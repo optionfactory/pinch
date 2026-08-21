@@ -185,6 +185,10 @@ pub struct DockerRunConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "ContainerEngine")]
     pub engine: Option<ContainerEngine>,
+    #[doc = "Container name passed as `--name` (defaults to the enclosing process name)."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(schema_with = "identifier_schema")]
+    pub name: Option<String>,
     #[doc = "The container image reference to run."]
     pub image: String,
     #[doc = "Raw flags appended verbatim to the engine run command, after the rendered ones."]
