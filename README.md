@@ -323,7 +323,7 @@ Each item under `processes` defines a process to supervise:
 * `mode`: Either `log` (default) or `tui` (allocates a PTY for interactive terminal apps).
 * `cwd`: Working directory (supports variables like `{{pwd}}`).
 * `link`: An optional web URL or link associated with this process.
-* `watch`: A list of file paths. If these files change, the process restarts automatically.
+* `watch`: A list of file paths. If these files change, a running process is restarted and a crashed one is started again; a process you stopped manually stays stopped.
 * `auto_start`, `auto_restart`, `grace_period`, `watch_settle_time_ms`: Overrides global defaults for this specific process.
 
 #### Full Example Configuration

@@ -63,7 +63,7 @@ impl Supervisor {
             .map(|p| p.id)
             .collect();
         for id in auto_start_ids {
-            supervisor.start_process(id, true);
+            supervisor.start_process(id);
         }
         supervisor
     }
@@ -220,26 +220,29 @@ impl Supervisor {
                 }
             }
             SupervisorEvent::RestartProcess(id, is_auto) => {
-                if is_auto {
-                    if let Some(pane) = self.state.panes.iter().find(|p| p.id == id) {
-                        if pane.state != ProcessState::PendingAutoRestart {
-                            return;
-                        }
-                    }
+                // This is a continuation scheduled earlier (grace timer or the
+                // end of a restart's terminate phase). Only honour it if the pane
+                // is still in the state that scheduled it: a manual stop or start
+                // in the meantime supersedes it.
+                let expected = if is_auto {
+                    ProcessState::PendingAutoRestart
+                } else {
+                    ProcessState::Restarting
+                };
+                let Some(pane) = self.state.panes.iter().find(|p| p.id == id) else {
+                    return;
+                };
+                if pane.state != expected {
+                    return;
                 }
-                self.start_process(id, is_auto);
+                self.launch(id, is_auto);
             }
-            SupervisorEvent::FileChanged(id) => {
-                if let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) {
-                    pane.add_system_log("FILE CHANGED - RESTARTING", ratatui::style::Color::Yellow);
-                }
-                self.restart_process(id);
-            }
+            SupervisorEvent::FileChanged(id) => self.handle_file_changed(id),
             SupervisorEvent::Error(_) => {}
         }
         match action {
             UserAction::StopProcess(id) => self.stop_process(id),
-            UserAction::StartProcess(id) => self.start_process(id, false),
+            UserAction::StartProcess(id) => self.start_process(id),
             UserAction::RestartProcess(id) => self.restart_process(id),
             UserAction::ToggleZoom(id) => self.state.toggle_zoom(id),
             UserAction::OpenLink(id) => {
@@ -266,51 +269,78 @@ impl Supervisor {
         }
     }
 
-    pub fn start_process(&mut self, id: usize, is_auto_restart: bool) {
-        if let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) {
-            if pane.state != ProcessState::Running {
-                if !is_auto_restart {
-                    pane.view_top_index = None;
-                }
-                match spawn_process(id, &pane.config, self.logs_tx.clone()) {
-                    Ok(PtyHandle { child, writer, master }) => {
-                        pane.state = ProcessState::Running;
-                        pane.child_process = Some(child);
-                        pane.pty_writer = Some(writer);
-                        pane.pty_master = Some(master);
-                        let msg = if is_auto_restart {
-                            "AUTO-RESTARTED"
-                        } else {
-                            "PROCESS STARTED"
-                        };
-                        pane.add_system_log(msg, ratatui::style::Color::Green);
-                    }
-                    Err(e) => {
-                        pane.state = ProcessState::Stopped;
-                        pane.add_system_log(&e, ratatui::style::Color::Red);
-                    }
-                }
+    /// User-initiated start (key/click) or boot auto-start. Ignored while the
+    /// process is running or a restart is already in flight, so it can never
+    /// spawn a second instance next to one that is still being terminated.
+    pub fn start_process(&mut self, id: usize) {
+        let Some(pane) = self.state.panes.iter().find(|p| p.id == id) else {
+            return;
+        };
+        if matches!(pane.state, ProcessState::Running | ProcessState::Restarting) {
+            return;
+        }
+        self.launch(id, false);
+    }
+
+    /// Unconditionally spawns the process into its pane. Callers are
+    /// responsible for the state checks.
+    fn launch(&mut self, id: usize, is_auto_restart: bool) {
+        let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) else {
+            return;
+        };
+        if !is_auto_restart {
+            pane.view_top_index = None;
+        }
+        match spawn_process(id, &pane.config, self.logs_tx.clone()) {
+            Ok(PtyHandle { child, writer, master }) => {
+                pane.state = ProcessState::Running;
+                pane.child_process = Some(child);
+                pane.pty_writer = Some(writer);
+                pane.pty_master = Some(master);
+                let msg = if is_auto_restart {
+                    "AUTO-RESTARTED"
+                } else {
+                    "PROCESS STARTED"
+                };
+                pane.add_system_log(msg, ratatui::style::Color::Green);
+            }
+            Err(e) => {
+                pane.state = ProcessState::Stopped;
+                pane.add_system_log(&e, ratatui::style::Color::Red);
             }
         }
     }
 
     pub fn stop_process(&mut self, id: usize) {
-        if let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) {
-            let old_state = pane.state;
-            if old_state == ProcessState::Running {
+        let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) else {
+            return;
+        };
+        match pane.state {
+            ProcessState::Running => {
                 pane.state = ProcessState::ManuallyStopped;
                 pane.terminate();
                 pane.add_system_log("STOP SIGNAL SENT (Ctrl+C)", ratatui::style::Color::Red);
-            } else if old_state == ProcessState::PendingAutoRestart {
+            }
+            ProcessState::PendingAutoRestart => {
                 pane.state = ProcessState::ManuallyStopped;
                 pane.add_system_log("PENDING RESTART CANCELLED", ratatui::style::Color::Red);
             }
+            ProcessState::Restarting => {
+                // The old instance is already being terminated; the pending
+                // continuation will see we are no longer `Restarting` and bail.
+                pane.state = ProcessState::ManuallyStopped;
+                pane.add_system_log("RESTART CANCELLED", ratatui::style::Color::Red);
+            }
+            ProcessState::Stopped | ProcessState::ManuallyStopped => {}
         }
     }
 
     pub fn restart_process(&mut self, id: usize) {
-        if let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) {
-            if pane.state == ProcessState::Running {
+        let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) else {
+            return;
+        };
+        match pane.state {
+            ProcessState::Running => {
                 pane.state = ProcessState::Restarting;
                 let terminate_handle = pane.terminate();
                 pane.add_system_log("RESTARTING", ratatui::style::Color::Yellow);
@@ -321,9 +351,37 @@ impl Supervisor {
                     }
                     let _ = tx_clone.send(SupervisorEvent::RestartProcess(id, false)).await;
                 });
-            } else {
-                self.start_process(id, false);
             }
+            // Already restarting: the instance about to start will be fresh.
+            ProcessState::Restarting => {}
+            ProcessState::Stopped | ProcessState::ManuallyStopped | ProcessState::PendingAutoRestart => {
+                self.launch(id, false);
+            }
+        }
+    }
+
+    /// A watched path changed. Restarts a running process and starts a crashed
+    /// or pending one, but leaves a *manually* stopped process alone: the user
+    /// asked for it to be down, and a file save must not override that.
+    fn handle_file_changed(&mut self, id: usize) {
+        let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) else {
+            return;
+        };
+        let (msg, color, act) = match pane.state {
+            ProcessState::Running => ("FILE CHANGED - RESTARTING", ratatui::style::Color::Yellow, true),
+            ProcessState::Stopped | ProcessState::PendingAutoRestart => {
+                ("FILE CHANGED - STARTING", ratatui::style::Color::Yellow, true)
+            }
+            ProcessState::Restarting => {
+                ("FILE CHANGED - RESTART ALREADY IN PROGRESS", ratatui::style::Color::DarkGray, false)
+            }
+            ProcessState::ManuallyStopped => {
+                ("FILE CHANGED - IGNORED (MANUALLY STOPPED)", ratatui::style::Color::DarkGray, false)
+            }
+        };
+        pane.add_system_log(msg, color);
+        if act {
+            self.restart_process(id);
         }
     }
 
@@ -338,61 +396,183 @@ impl Supervisor {
     }
 
     fn handle_process_exit(&mut self, id: usize, success: bool) {
-        let mut start_delay = None;
-        let mut immediate_restart = false;
-        if let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) {
-            let old_state = pane.state;
-            if old_state == ProcessState::Stopped
-                || old_state == ProcessState::PendingAutoRestart
-                || old_state == ProcessState::ManuallyStopped
-            {
-                return;
-            }
-            pane.state = ProcessState::Stopped;
-            pane.child_process = None;
-            pane.pty_writer = None;
-            pane.pty_master = None;
-            pane.last_size = None;
-            if old_state == ProcessState::Restarting {
-                immediate_restart = true;
-            } else if pane.config.auto_restart && old_state == ProcessState::Running {
-                pane.state = ProcessState::PendingAutoRestart;
-                let grace = pane.config.grace_period;
-                let (msg, color) = if success {
-                    (
-                        format!("EXITED CLEANLY (Restarting in {}ms)", grace),
-                        ratatui::style::Color::Green,
-                    )
-                } else {
-                    (
-                        format!("CRASHED / FAILED (Restarting in {}ms)", grace),
-                        ratatui::style::Color::Red,
-                    )
-                };
-                pane.add_system_log(&msg, color);
-                start_delay = Some(grace);
-            } else {
-                let (msg, color) = if success {
-                    ("EXITED CLEANLY".to_string(), ratatui::style::Color::Green)
-                } else {
-                    ("CRASHED / FAILED".to_string(), ratatui::style::Color::Red)
-                };
-                pane.add_system_log(&msg, color);
-            }
+        // Note: `Restarting` and `ManuallyStopped` never get here, because
+        // `terminate()` takes the child out of the pane before the tick loop can
+        // observe its exit; those flows are driven by `terminate()`'s handle.
+        let Some(pane) = self.state.panes.iter_mut().find(|p| p.id == id) else {
+            return;
+        };
+        if pane.state != ProcessState::Running {
+            return;
         }
-        if immediate_restart {
-            let tx_clone = self.ui_tx.clone();
-            tokio::spawn(async move {
-                let _ = tx_clone.send(SupervisorEvent::RestartProcess(id, false)).await;
-            });
-        } else if let Some(delay) = start_delay {
-            let tx_clone = self.ui_tx.clone();
-            tokio::spawn(async move {
-                if delay > 0 {
-                    tokio::time::sleep(Duration::from_millis(delay)).await;
-                }
-                let _ = tx_clone.send(SupervisorEvent::RestartProcess(id, true)).await;
-            });
+        pane.state = ProcessState::Stopped;
+        pane.child_process = None;
+        pane.pty_writer = None;
+        pane.pty_master = None;
+        pane.last_size = None;
+        let (outcome, color) = if success {
+            ("EXITED CLEANLY", ratatui::style::Color::Green)
+        } else {
+            ("CRASHED / FAILED", ratatui::style::Color::Red)
+        };
+        if !pane.config.auto_restart {
+            pane.add_system_log(outcome, color);
+            return;
         }
+        let grace = pane.config.grace_period;
+        pane.state = ProcessState::PendingAutoRestart;
+        pane.add_system_log(&format!("{} (Restarting in {}ms)", outcome, grace), color);
+        let tx_clone = self.ui_tx.clone();
+        tokio::spawn(async move {
+            if grace > 0 {
+                tokio::time::sleep(Duration::from_millis(grace)).await;
+            }
+            let _ = tx_clone.send(SupervisorEvent::RestartProcess(id, true)).await;
+        });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{PaneMode, ProcessConfig, RunMode};
+
+    fn cfg(name: &str, cmd: &[&str], auto_restart: bool) -> ProcessConfig {
+        ProcessConfig {
+            name: name.into(),
+            title: name.into(),
+            cmd: cmd.iter().map(|s| s.to_string()).collect(),
+            link: None,
+            cwd: None,
+            watch: vec![],
+            watch_settle_time_ms: 800,
+            mode: PaneMode::Log,
+            auto_start: false,
+            auto_restart,
+            grace_period: 0,
+            run_mode: RunMode::Exec,
+            container: None,
+        }
+    }
+
+    fn supervisor(processes: Vec<ProcessConfig>) -> (Supervisor, mpsc::Receiver<SupervisorEvent>) {
+        let (ui_tx, ui_rx) = mpsc::channel(64);
+        let (logs_tx, _logs_rx) = mpsc::channel(64);
+        std::mem::forget(_logs_rx); // keep the log channel open for the reader threads
+        let config = PinchConfig {
+            name: "test".into(),
+            processes,
+            logs_max_size: None,
+            layout: vec![],
+        };
+        (Supervisor::new(config, ui_tx, logs_tx), ui_rx)
+    }
+
+    fn state(s: &Supervisor, id: usize) -> ProcessState {
+        s.state.panes[id].state
+    }
+
+    fn has_child(s: &Supervisor, id: usize) -> bool {
+        s.state.panes[id].child_process.is_some()
+    }
+
+    async fn cleanup(mut s: Supervisor) {
+        for h in s.shutdown() {
+            let _ = h.await;
+        }
+    }
+
+    #[tokio::test]
+    async fn start_is_ignored_while_a_restart_is_in_flight() {
+        let (mut s, _rx) = supervisor(vec![cfg("p", &["sleep", "30"], true)]);
+        s.start_process(0);
+        assert_eq!(state(&s, 0), ProcessState::Running);
+        s.restart_process(0);
+        assert_eq!(state(&s, 0), ProcessState::Restarting);
+        assert!(!has_child(&s, 0), "terminate() takes the child");
+        // `s` key / click while restarting used to spawn a duplicate.
+        s.start_process(0);
+        assert_eq!(state(&s, 0), ProcessState::Restarting);
+        assert!(!has_child(&s, 0));
+        cleanup(s).await;
+    }
+
+    #[tokio::test]
+    async fn stop_cancels_an_in_flight_restart() {
+        let (mut s, _rx) = supervisor(vec![cfg("p", &["sleep", "30"], true)]);
+        s.start_process(0);
+        s.restart_process(0);
+        s.stop_process(0);
+        assert_eq!(state(&s, 0), ProcessState::ManuallyStopped);
+        // The continuation the restart scheduled must now be a no-op.
+        s.handle_event(SupervisorEvent::RestartProcess(0, false));
+        assert_eq!(state(&s, 0), ProcessState::ManuallyStopped);
+        assert!(!has_child(&s, 0));
+        cleanup(s).await;
+    }
+
+    #[tokio::test]
+    async fn restart_continuation_starts_the_process_when_still_restarting() {
+        let (mut s, _rx) = supervisor(vec![cfg("p", &["sleep", "30"], true)]);
+        s.start_process(0);
+        s.restart_process(0);
+        s.handle_event(SupervisorEvent::RestartProcess(0, false));
+        assert_eq!(state(&s, 0), ProcessState::Running);
+        assert!(has_child(&s, 0));
+        cleanup(s).await;
+    }
+
+    #[tokio::test]
+    async fn file_change_does_not_resurrect_a_manually_stopped_process() {
+        let (mut s, _rx) = supervisor(vec![cfg("p", &["sleep", "30"], true)]);
+        s.start_process(0);
+        s.stop_process(0);
+        assert_eq!(state(&s, 0), ProcessState::ManuallyStopped);
+        s.handle_event(SupervisorEvent::FileChanged(0));
+        assert_eq!(state(&s, 0), ProcessState::ManuallyStopped);
+        assert!(!has_child(&s, 0));
+        cleanup(s).await;
+    }
+
+    #[tokio::test]
+    async fn file_change_starts_a_crashed_process_and_restarts_a_running_one() {
+        let (mut s, _rx) = supervisor(vec![cfg("p", &["sleep", "30"], false)]);
+        assert_eq!(state(&s, 0), ProcessState::Stopped);
+        s.handle_event(SupervisorEvent::FileChanged(0));
+        assert_eq!(state(&s, 0), ProcessState::Running);
+        s.handle_event(SupervisorEvent::FileChanged(0));
+        assert_eq!(state(&s, 0), ProcessState::Restarting);
+        cleanup(s).await;
+    }
+
+    #[tokio::test]
+    async fn auto_restart_continuation_is_ignored_after_a_manual_start_or_stop() {
+        let (mut s, _rx) = supervisor(vec![cfg("p", &["sleep", "30"], true)]);
+        s.state.panes[0].state = ProcessState::PendingAutoRestart;
+        s.stop_process(0);
+        assert_eq!(state(&s, 0), ProcessState::ManuallyStopped);
+        s.handle_event(SupervisorEvent::RestartProcess(0, true));
+        assert_eq!(state(&s, 0), ProcessState::ManuallyStopped);
+        assert!(!has_child(&s, 0));
+
+        s.state.panes[0].state = ProcessState::PendingAutoRestart;
+        s.start_process(0); // user got impatient
+        assert_eq!(state(&s, 0), ProcessState::Running);
+        s.handle_event(SupervisorEvent::RestartProcess(0, true));
+        assert_eq!(state(&s, 0), ProcessState::Running);
+        cleanup(s).await;
+    }
+
+    #[tokio::test]
+    async fn exit_schedules_auto_restart_only_when_running() {
+        let (mut s, mut rx) = supervisor(vec![cfg("p", &["true"], true)]);
+        s.start_process(0);
+        // wait for `true` to exit, then let the tick observe it
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        s.handle_event(SupervisorEvent::SupervisorTick);
+        assert_eq!(state(&s, 0), ProcessState::PendingAutoRestart);
+        let ev = tokio::time::timeout(Duration::from_secs(2), rx.recv()).await.unwrap().unwrap();
+        assert!(matches!(ev, SupervisorEvent::RestartProcess(0, true)));
+        cleanup(s).await;
     }
 }
