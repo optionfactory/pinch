@@ -24,9 +24,11 @@ pub struct PaneGeometry {
 
 impl PaneGeometry {
     /// Constructs a new geometry with predefined header button positions
-    /// clamped within the bounds of `area`.
-    pub fn new(target: PaneTarget, area: Rect) -> Self {
-        let base_x = area.x.saturating_add(1);
+    /// clamped within the bounds of `area`. `has_left_border` must mirror the
+    /// rendered block: ratatui shifts the title right by one column only when
+    /// a left border is drawn (zoomed panes are drawn with top/bottom only).
+    pub fn new(target: PaneTarget, area: Rect, has_left_border: bool) -> Self {
+        let base_x = if has_left_border { area.x.saturating_add(1) } else { area.x };
         let base_y = area.y;
         Self {
             target,
@@ -96,7 +98,7 @@ pub fn compute_pane_geometries(
     }
 
     if let Some(zoom_id) = zoomed_pane.filter(|&id| panes.iter().any(|p| p.id == id)) {
-        return vec![PaneGeometry::new(PaneTarget::Process(zoom_id), grid_area)];
+        return vec![PaneGeometry::new(PaneTarget::Process(zoom_id), grid_area, false)];
     }
 
     let mut geometries = Vec::new();
@@ -156,7 +158,7 @@ fn process_layout_node(
 
     if let Some(name) = &node.name {
         if let Some(target) = resolver.resolve_target(name, panes) {
-            geometries.push(PaneGeometry::new(target, area));
+            geometries.push(PaneGeometry::new(target, area, true));
         }
         return;
     }
@@ -283,7 +285,35 @@ fn layout_unassigned_panes(
             .split(group_area);
 
         for (pane, &area) in group_panes.iter().zip(secondary_areas.iter()) {
-            geometries.push(PaneGeometry::new(PaneTarget::Process(pane.id), area));
+            geometries.push(PaneGeometry::new(PaneTarget::Process(pane.id), area, true));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn header_buttons_start_after_left_border() {
+        let g = PaneGeometry::new(PaneTarget::Process(0), Rect::new(10, 5, 40, 10), true);
+        assert_eq!(g.toggle_area, Rect::new(11, 5, 4, 1));
+        assert_eq!(g.restart_area.x, 15);
+        assert_eq!(g.link_area.x, 27);
+    }
+
+    #[test]
+    fn zoomed_pane_has_no_left_border_offset() {
+        let g = PaneGeometry::new(PaneTarget::Process(0), Rect::new(10, 5, 40, 10), false);
+        assert_eq!(g.toggle_area, Rect::new(10, 5, 4, 1));
+        assert_eq!(g.link_area.x, 26);
+    }
+
+    #[test]
+    fn buttons_outside_a_narrow_pane_are_empty() {
+        let g = PaneGeometry::new(PaneTarget::Process(0), Rect::new(0, 0, 10, 3), true);
+        assert_eq!(g.toggle_area.width, 4);
+        assert_eq!(g.zoom_area.width, 0);
+        assert_eq!(g.link_area.width, 0);
     }
 }

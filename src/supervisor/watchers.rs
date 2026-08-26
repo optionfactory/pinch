@@ -7,11 +7,17 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 
+/// A watch path that could not be registered, with the pane it belongs to.
+pub struct WatchWarning {
+    pub pane_id: usize,
+    pub message: String,
+}
+
 pub fn start_watcher(
     config: &crate::config::PinchConfig,
     tx_watcher: mpsc::Sender<SupervisorEvent>,
     is_running: Arc<AtomicBool>,
-) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error>> {
+) -> Result<(tokio::task::JoinHandle<()>, Vec<WatchWarning>), Box<dyn std::error::Error>> {
     let (watch_tx, mut watch_rx) = tokio::sync::mpsc::channel(1024);
     let mut watcher = RecommendedWatcher::new(
         move |res: notify::Result<notify::Event>| {
@@ -25,11 +31,15 @@ pub fn start_watcher(
     )?;
     let mut path_to_pane: Vec<(PathBuf, usize)> = Vec::new();
     let mut pane_settle_times: HashMap<usize, Duration> = HashMap::new();
+    let mut warnings = Vec::new();
     for (idx, process) in config.processes.iter().enumerate() {
         pane_settle_times.insert(idx, Duration::from_millis(process.watch_settle_time_ms));
         for path in &process.watch {
             if let Err(e) = watcher.watch(path, RecursiveMode::Recursive) {
-                eprintln!("Warning: Failed to watch path {:?} - {}", path, e);
+                warnings.push(WatchWarning {
+                    pane_id: idx,
+                    message: format!("Failed to watch path {:?} - {}", path, e),
+                });
             } else {
                 let resolved = path.canonicalize().unwrap_or_else(|_| path.clone());
                 path_to_pane.push((resolved, idx));
@@ -72,5 +82,5 @@ pub fn start_watcher(
         }
         drop(watcher);
     });
-    Ok(handle)
+    Ok((handle, warnings))
 }

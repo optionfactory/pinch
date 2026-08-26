@@ -10,10 +10,17 @@ use tokio::time::{Duration, interval};
 
 /// Orchestrates the TUI event loop, supervisor execution, and background task lifecycle.
 pub async fn run_tui(config: PinchConfig) -> Result<(), Box<dyn std::error::Error>> {
-    let mut guard = TerminalGuard::init()?;
     let (tx_ui, rx_ui) = mpsc::channel::<SupervisorEvent>(100);
     let (tx_logs, rx_logs) = mpsc::channel::<SupervisorEvent>(10_000);
     let is_running = Arc::new(AtomicBool::new(true));
+    // Register watches before entering the alternate screen so warnings reach
+    // the user's regular terminal (they are also echoed into the pane below).
+    let (watcher_handle, watch_warnings) =
+        supervisor::watchers::start_watcher(&config, tx_ui.clone(), Arc::clone(&is_running))?;
+    for w in &watch_warnings {
+        eprintln!("Warning: {}", w.message);
+    }
+    let mut guard = TerminalGuard::init()?;
     let tx_signal = tx_ui.clone();
     let signal_handle = tokio::spawn(async move {
         use tokio::signal::unix::{SignalKind, signal};
@@ -29,7 +36,6 @@ pub async fn run_tui(config: PinchConfig) -> Result<(), Box<dyn std::error::Erro
             .send(SupervisorEvent::Error("SIGINT/SIGTERM received".to_string()))
             .await;
     });
-    let watcher_handle = supervisor::watchers::start_watcher(&config, tx_ui.clone(), Arc::clone(&is_running))?;
     let tx_input = tx_ui.clone();
     let input_handle = tokio::spawn(async move {
         let mut tick_interval = interval(Duration::from_millis(500));
@@ -59,6 +65,11 @@ pub async fn run_tui(config: PinchConfig) -> Result<(), Box<dyn std::error::Erro
         }
     });
     let mut supervisor = Supervisor::new(config, tx_ui, tx_logs);
+    for w in watch_warnings {
+        if let Some(pane) = supervisor.state.panes.iter_mut().find(|p| p.id == w.pane_id) {
+            pane.add_system_log(&w.message, ratatui::style::Color::Yellow);
+        }
+    }
     let run_result = supervisor.run(&mut guard.terminal, rx_ui, rx_logs).await;
     // signal tasks to stop
     is_running.store(false, Ordering::SeqCst);

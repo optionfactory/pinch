@@ -66,38 +66,65 @@ pub fn spawn_process(
     })
 }
 
-fn handle_log_mode(mut reader: Box<dyn Read + Send>, pane_id: usize, tx_logs: mpsc::Sender<SupervisorEvent>) {
-    let mut buf = [0u8; 4096];
-    let mut line_buffer = Vec::new();
-    while let Ok(bytes_read) = reader.read(&mut buf) {
-        if bytes_read == 0 {
-            if !line_buffer.is_empty() {
-                let clean_line = String::from_utf8_lossy(&line_buffer).trim_end().to_string();
-                let _ = tx_logs.blocking_send(SupervisorEvent::LogLine(pane_id, clean_line));
-            }
-            break;
-        }
-        for &byte in &buf[..bytes_read] {
-            line_buffer.push(byte);
-            if byte != b'\n' && line_buffer.len() < 8192 {
+/// Incrementally splits a byte stream into log lines. Lines are cut at `\n`,
+/// or when the pending buffer exceeds `MAX_LINE_BYTES` (at a UTF-8 boundary
+/// when possible). Trailing whitespace (including `\r`) is trimmed.
+#[derive(Default)]
+pub struct LineSplitter {
+    pending: Vec<u8>,
+}
+
+const MAX_LINE_BYTES: usize = 8192;
+
+impl LineSplitter {
+    pub fn push(&mut self, chunk: &[u8]) -> Vec<String> {
+        let mut lines = Vec::new();
+        for &byte in chunk {
+            self.pending.push(byte);
+            if byte != b'\n' && self.pending.len() < MAX_LINE_BYTES {
                 continue;
             }
-            let mut split_index = line_buffer.len();
+            let mut split_index = self.pending.len();
             if byte != b'\n' {
-                if let Err(e) = std::str::from_utf8(&line_buffer) {
+                if let Err(e) = std::str::from_utf8(&self.pending) {
                     if e.error_len().is_none() {
                         split_index = e.valid_up_to();
                     }
                 }
             }
             if split_index > 0 {
-                let clean_line = String::from_utf8_lossy(&line_buffer[..split_index])
-                    .trim_end()
-                    .to_string();
-                let _ = tx_logs.blocking_send(SupervisorEvent::LogLine(pane_id, clean_line));
-                line_buffer.drain(..split_index);
+                lines.push(String::from_utf8_lossy(&self.pending[..split_index]).trim_end().to_string());
+                self.pending.drain(..split_index);
             }
         }
+        lines
+    }
+
+    /// Returns whatever is left once the stream has ended (a last line without
+    /// a trailing newline, typically a crash message).
+    pub fn finish(self) -> Option<String> {
+        if self.pending.is_empty() {
+            return None;
+        }
+        Some(String::from_utf8_lossy(&self.pending).trim_end().to_string())
+    }
+}
+
+fn handle_log_mode(mut reader: Box<dyn Read + Send>, pane_id: usize, tx_logs: mpsc::Sender<SupervisorEvent>) {
+    let mut buf = [0u8; 4096];
+    let mut splitter = LineSplitter::default();
+    // On Linux the PTY master reports the child's exit as `Err(EIO)`, not as
+    // `Ok(0)`, so both ends of the loop are "stream finished".
+    while let Ok(bytes_read) = reader.read(&mut buf) {
+        if bytes_read == 0 {
+            break;
+        }
+        for line in splitter.push(&buf[..bytes_read]) {
+            let _ = tx_logs.blocking_send(SupervisorEvent::LogLine(pane_id, line));
+        }
+    }
+    if let Some(last) = splitter.finish() {
+        let _ = tx_logs.blocking_send(SupervisorEvent::LogLine(pane_id, last));
     }
 }
 
@@ -109,5 +136,45 @@ fn handle_tui_mode(mut reader: Box<dyn Read + Send>, pane_id: usize, tx_logs: mp
         }
         let payload = buf[..bytes_read].to_vec();
         let _ = tx_logs.blocking_send(SupervisorEvent::TerminalBytes(pane_id, payload));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn splits_on_newline_and_trims_cr() {
+        let mut sp = LineSplitter::default();
+        assert_eq!(sp.push(b"one\r\ntwo\n"), vec!["one", "two"]);
+        assert!(sp.finish().is_none());
+    }
+
+    #[test]
+    fn line_spanning_chunks_is_reassembled() {
+        let mut sp = LineSplitter::default();
+        assert!(sp.push(b"hel").is_empty());
+        assert_eq!(sp.push(b"lo\nwor"), vec!["hello"]);
+        assert_eq!(sp.push(b"ld\n"), vec!["world"]);
+    }
+
+    #[test]
+    fn trailing_line_without_newline_is_flushed_on_finish() {
+        let mut sp = LineSplitter::default();
+        assert!(sp.push(b"panicked at main.rs:3").is_empty());
+        assert_eq!(sp.finish(), Some("panicked at main.rs:3".to_string()));
+    }
+
+    #[test]
+    fn oversized_line_is_cut_at_utf8_boundary() {
+        let mut sp = LineSplitter::default();
+        // 8191 ASCII bytes followed by the first byte of a 2-byte char: the cut
+        // must land before the incomplete sequence.
+        let mut data = vec![b'a'; MAX_LINE_BYTES - 1];
+        data.extend_from_slice("é".as_bytes());
+        let lines = sp.push(&data);
+        assert_eq!(lines.len(), 1);
+        assert_eq!(lines[0].len(), MAX_LINE_BYTES - 1);
+        assert_eq!(sp.finish(), Some("é".to_string()));
     }
 }

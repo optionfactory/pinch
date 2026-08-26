@@ -83,6 +83,9 @@ impl ProcessPane {
 
     pub fn terminate(&mut self) -> Option<tokio::task::JoinHandle<()>> {
         self.pty_master.take();
+        // The next spawn opens a fresh 80x24 PTY; forget the old size so
+        // `sync_pty_sizes` resizes it on the next frame.
+        self.last_size = None;
         if let Some(mut writer) = self.pty_writer.take() {
             let _ = writer.write_all(b"\x03");
             let _ = writer.flush();
