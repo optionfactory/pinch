@@ -277,9 +277,10 @@ pub enum DockerNetworkConfig {
     #[doc = "Explicit network configuration specifying subnet CIDR and custom Docker creation arguments."]
     Detailed {
         subnet: String,
+        #[doc = "Raw flags appended verbatim to `docker network create` (shell-style string, same as a process `opts`)."]
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        #[schemars(with = "Vec<String>")]
-        args: Option<Vec<String>>,
+        #[schemars(with = "String")]
+        args: Option<String>,
     },
 }
 
@@ -291,7 +292,7 @@ impl DockerNetworkConfig {
         }
     }
 
-    pub fn args(&self) -> Option<&[String]> {
+    pub fn args(&self) -> Option<&str> {
         match self {
             Self::Simple(_) => None,
             Self::Detailed { args, .. } => args.as_deref(),

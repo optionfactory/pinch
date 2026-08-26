@@ -91,13 +91,13 @@ pub fn show_networks(
         let config = networks
             .and_then(|nets| nets.get(name))
             .ok_or_else(|| format!("Network '{}' not found in configuration", name))?;
-        let cmd_args = build_docker_network_command(name, config, &context_vars);
+        let cmd_args = build_docker_network_command(name, config, &context_vars)?;
         render_single(&format_command_args(cmd_args), format)?;
     } else {
         let mut sorted = BTreeMap::new();
         if let Some(nets) = networks {
             for (name, config) in nets {
-                let cmd_args = build_docker_network_command(name, config, &context_vars);
+                let cmd_args = build_docker_network_command(name, config, &context_vars)?;
                 sorted.insert(name, format_command_args(cmd_args));
             }
         }

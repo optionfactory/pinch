@@ -6,7 +6,7 @@ pub fn build_docker_network_command(
     net_key: &str,
     config: &DockerNetworkConfig,
     vars: &HashMap<String, String>,
-) -> Vec<String> {
+) -> Result<Vec<String>, String> {
     let net_name = apply_vars(net_key, vars);
     let mut cmd_args = vec!["docker".to_string(), "network".to_string(), "create".to_string()];
     cmd_args.push("-o".to_string());
@@ -15,13 +15,14 @@ pub fn build_docker_network_command(
     cmd_args.push(apply_vars(config.subnet(), vars));
     cmd_args.push("-d".to_string());
     cmd_args.push("bridge".to_string());
-    if let Some(args_list) = config.args() {
-        for arg in args_list {
-            cmd_args.push(apply_vars(arg, vars));
-        }
+    if let Some(args) = config.args() {
+        // Same treatment as a process `opts`: expand, then shell-split.
+        let tokens = shlex::split(&apply_vars(args, vars))
+            .ok_or_else(|| format!("Failed to parse args for network '{}': {}", net_name, args))?;
+        cmd_args.extend(tokens);
     }
     cmd_args.push(net_name);
-    cmd_args
+    Ok(cmd_args)
 }
 
 pub fn ensure_docker_network(
@@ -39,7 +40,7 @@ pub fn ensure_docker_network(
         .map_err(|e| format!("Failed to inspect docker network '{}': {}", net_name, e))?;
     if !status.success() {
         let mut cmd = Command::new("docker");
-        let cmd_args = build_docker_network_command(net_key, config, vars);
+        let cmd_args = build_docker_network_command(net_key, config, vars)?;
         cmd.args(&cmd_args[1..]);
         let create_status = cmd
             .status()
@@ -109,6 +110,44 @@ mod tests {
         assert_eq!(sel.len(), 1);
         assert_eq!(sel[0].0, "b");
         assert_eq!(sel[0].1.subnet(), "10.0.1.0/24");
+    }
+
+    fn tail(cmd: &[String]) -> Vec<&str> {
+        // everything after the fixed prefix `docker network create -o <bridge> --subnet <s> -d bridge`
+        cmd[9..].iter().map(String::as_str).collect()
+    }
+
+    #[test]
+    fn network_args_as_folded_string_are_shell_split_and_expanded() {
+        let m = manifest(
+            "schema_version: 1\nname: x\nvars:\n  icc: \"false\"\ndocker_networks:\n  adv:\n    subnet: 172.19.0.0/24\n    args: >\n      --ipv6\n      --opt com.docker.network.bridge.enable_icc={{ icc }}\n      --label 'a b'\n",
+        );
+        let vars = m.resolve_vars(&HashMap::new());
+        let cmd = build_docker_network_command("adv", &m.docker_networks.as_ref().unwrap()["adv"], &vars).unwrap();
+        assert_eq!(
+            tail(&cmd),
+            vec!["--ipv6", "--opt", "com.docker.network.bridge.enable_icc=false", "--label", "a b", "adv"]
+        );
+    }
+
+    #[test]
+    fn network_args_may_be_empty_or_absent() {
+        let m = manifest(
+            "schema_version: 1\nname: x\ndocker_networks:\n  adv:\n    subnet: 172.19.0.0/24\n    args: \"\"\n  simple: 10.0.0.0/24\n",
+        );
+        let vars = m.resolve_vars(&HashMap::new());
+        let nets = m.docker_networks.as_ref().unwrap();
+        assert_eq!(tail(&build_docker_network_command("adv", &nets["adv"], &vars).unwrap()), vec!["adv"]);
+        assert_eq!(tail(&build_docker_network_command("simple", &nets["simple"], &vars).unwrap()), vec!["simple"]);
+    }
+
+    #[test]
+    fn malformed_network_args_string_is_an_error() {
+        let m = manifest(
+            "schema_version: 1\nname: x\ndocker_networks:\n  adv:\n    subnet: 172.19.0.0/24\n    args: \"--label 'oops\"\n",
+        );
+        let vars = m.resolve_vars(&HashMap::new());
+        assert!(build_docker_network_command("adv", &m.docker_networks.as_ref().unwrap()["adv"], &vars).is_err());
     }
 
     #[test]

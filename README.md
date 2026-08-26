@@ -286,7 +286,8 @@ You can define Docker networks in the `docker_networks` block at the root of you
 docker_networks:
   # Simple format (String maps to the subnet)
   simple_net_{{env}}: "172.18.0.1/24"
-  # Detailed format (Object maps to subnet and custom args as a list)
+  # Detailed format (Object with subnet and extra `docker network create` flags,
+  # a shell-style string like a process `opts`)
   advanced_net:
     subnet: "172.19.0.1/24"
     args: >
