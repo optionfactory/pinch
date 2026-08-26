@@ -72,6 +72,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     cmd.stdin(std::process::Stdio::null());
                     cmd.stdout(std::process::Stdio::null());
                     cmd.stderr(std::process::Stdio::null());
+                    // Detach from the shell's job: in its own process group the
+                    // child no longer receives the SIGHUP/SIGINT aimed at the
+                    // foreground job when the terminal closes or ^C is pressed.
+                    cmd.process_group(0);
                     match cmd.spawn() {
                         Ok(child) => {
                             println!("Started '{}' in the background (PID: {})", name, child.id());
