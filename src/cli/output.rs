@@ -162,3 +162,14 @@ fn flatten_json_value(prefix: &str, value: &serde_json::Value, out: &mut BTreeMa
         serde_json::Value::Null => {}
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_command_args_quotes_only_what_needs_it() {
+        let args = vec!["ping".to_string(), "-c 10".to_string(), "8.8.8.8".to_string(), "it's".to_string()];
+        assert_eq!(format_command_args(args), r#"ping '-c 10' 8.8.8.8 "it's""#);
+    }
+}

@@ -1,7 +1,7 @@
 use crate::config::PaneMode;
 use crate::processes::panes::{LogMode, ProcessState};
 use crate::ui::DashboardState;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
 
 pub enum UserAction {
@@ -24,7 +24,88 @@ impl RectHitTest for Rect {
     }
 }
 
+/// Encodes a key press as the byte sequence a terminal would send to the
+/// application. `application_cursor` mirrors DECCKM as tracked by the pane's
+/// vt100 parser (vim/less switch it on) and selects `ESC O x` over `ESC [ x`
+/// for cursor keys.
+pub fn encode_key(key: KeyEvent, application_cursor: bool) -> Vec<u8> {
+    let m = key.modifiers;
+    // xterm modifier parameter: 1 + (shift:1 | alt:2 | ctrl:4)
+    let modifier_param = 1
+        + u8::from(m.contains(KeyModifiers::SHIFT))
+        + 2 * u8::from(m.contains(KeyModifiers::ALT))
+        + 4 * u8::from(m.contains(KeyModifiers::CONTROL));
+    let csi = |final_byte: char| -> Vec<u8> {
+        if modifier_param > 1 {
+            format!("\x1b[1;{}{}", modifier_param, final_byte).into_bytes()
+        } else if application_cursor {
+            format!("\x1bO{}", final_byte).into_bytes()
+        } else {
+            format!("\x1b[{}", final_byte).into_bytes()
+        }
+    };
+    let tilde = |number: u8| -> Vec<u8> {
+        if modifier_param > 1 {
+            format!("\x1b[{};{}~", number, modifier_param).into_bytes()
+        } else {
+            format!("\x1b[{}~", number).into_bytes()
+        }
+    };
+    let mut bytes = match key.code {
+        KeyCode::Char(c) if m.contains(KeyModifiers::CONTROL) => {
+            let lower = c.to_ascii_lowercase();
+            match lower {
+                'a'..='z' => vec![lower as u8 - b'a' + 1],
+                ' ' | '@' | '2' => vec![0],
+                '[' | '3' => vec![0x1b],
+                '\\' | '4' => vec![0x1c],
+                ']' | '5' => vec![0x1d],
+                '^' | '6' => vec![0x1e],
+                '_' | '7' | '/' => vec![0x1f],
+                '?' | '8' => vec![0x7f],
+                _ => c.to_string().into_bytes(),
+            }
+        }
+        KeyCode::Char(c) => c.to_string().into_bytes(),
+        KeyCode::Enter => b"\r".to_vec(),
+        KeyCode::Esc => b"\x1b".to_vec(),
+        KeyCode::Backspace => b"\x7f".to_vec(),
+        KeyCode::Tab => b"\t".to_vec(),
+        KeyCode::BackTab => b"\x1b[Z".to_vec(),
+        KeyCode::Null => vec![0],
+        KeyCode::Up => csi('A'),
+        KeyCode::Down => csi('B'),
+        KeyCode::Right => csi('C'),
+        KeyCode::Left => csi('D'),
+        KeyCode::Home => csi('H'),
+        KeyCode::End => csi('F'),
+        KeyCode::Insert => tilde(2),
+        KeyCode::Delete => tilde(3),
+        KeyCode::PageUp => tilde(5),
+        KeyCode::PageDown => tilde(6),
+        KeyCode::F(n @ 1..=4) => {
+            if modifier_param > 1 {
+                format!("\x1b[1;{}{}", modifier_param, (b'P' + n - 1) as char).into_bytes()
+            } else {
+                format!("\x1bO{}", (b'P' + n - 1) as char).into_bytes()
+            }
+        }
+        KeyCode::F(n @ 5..=12) => tilde([15, 17, 18, 19, 20, 21, 23, 24][(n - 5) as usize]),
+        _ => vec![],
+    };
+    // Alt+<char> is conventionally sent as ESC followed by the character.
+    if m.contains(KeyModifiers::ALT) && matches!(key.code, KeyCode::Char(_) | KeyCode::Enter | KeyCode::Backspace) {
+        bytes.insert(0, 0x1b);
+    }
+    bytes
+}
+
 pub fn handle_key(state: &mut DashboardState, key: KeyEvent) -> UserAction {
+    // Terminals with the kitty keyboard protocol also report Repeat/Release;
+    // acting on those would double-fire every shortcut.
+    if key.kind != KeyEventKind::Press {
+        return UserAction::None;
+    }
     let code = key.code;
     let modifiers = key.modifiers;
 
@@ -71,27 +152,9 @@ pub fn handle_key(state: &mut DashboardState, key: KeyEvent) -> UserAction {
                 pane.tui_focused = false;
                 return UserAction::None;
             }
+            let application_cursor = pane.parser.screen().application_cursor();
             if let Some(writer) = &mut pane.pty_writer {
-                let bytes = match code {
-                    KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => {
-                        let mapped = c.to_ascii_lowercase() as u8;
-                        if (b'a'..=b'z').contains(&mapped) {
-                            vec![mapped - b'a' + 1]
-                        } else {
-                            vec![mapped]
-                        }
-                    }
-                    KeyCode::Char(c) => vec![c as u8],
-                    KeyCode::Enter => b"\r".to_vec(),
-                    KeyCode::Esc => b"\x1b".to_vec(),
-                    KeyCode::Backspace => b"\x08".to_vec(),
-                    KeyCode::Up => b"\x1b[A".to_vec(),
-                    KeyCode::Down => b"\x1b[B".to_vec(),
-                    KeyCode::Right => b"\x1b[C".to_vec(),
-                    KeyCode::Left => b"\x1b[D".to_vec(),
-                    KeyCode::Tab => b"\t".to_vec(),
-                    _ => vec![],
-                };
+                let bytes = encode_key(key, application_cursor);
                 if !bytes.is_empty() {
                     let _ = writer.write_all(&bytes);
                     let _ = writer.flush();
@@ -231,4 +294,64 @@ pub fn handle_mouse(state: &mut DashboardState, mouse_event: MouseEvent) -> User
         _ => {}
     }
     UserAction::None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn key(code: KeyCode) -> KeyEvent {
+        KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    fn key_mod(code: KeyCode, m: KeyModifiers) -> KeyEvent {
+        KeyEvent::new(code, m)
+    }
+
+    #[test]
+    fn plain_chars_are_utf8_encoded() {
+        assert_eq!(encode_key(key(KeyCode::Char('a')), false), b"a");
+        assert_eq!(encode_key(key(KeyCode::Char('é')), false), "é".as_bytes());
+        assert_eq!(encode_key(key(KeyCode::Char('€')), false), "€".as_bytes());
+    }
+
+    #[test]
+    fn control_chars_map_to_c0_codes() {
+        assert_eq!(encode_key(key_mod(KeyCode::Char('c'), KeyModifiers::CONTROL), false), vec![0x03]);
+        assert_eq!(encode_key(key_mod(KeyCode::Char('Z'), KeyModifiers::CONTROL), false), vec![0x1a]);
+        assert_eq!(encode_key(key_mod(KeyCode::Char('['), KeyModifiers::CONTROL), false), vec![0x1b]);
+    }
+
+    #[test]
+    fn backspace_is_del_and_editing_keys_are_forwarded() {
+        assert_eq!(encode_key(key(KeyCode::Backspace), false), vec![0x7f]);
+        assert_eq!(encode_key(key(KeyCode::Delete), false), b"\x1b[3~");
+        assert_eq!(encode_key(key(KeyCode::Home), false), b"\x1b[H");
+        assert_eq!(encode_key(key(KeyCode::End), false), b"\x1b[F");
+        assert_eq!(encode_key(key(KeyCode::PageUp), false), b"\x1b[5~");
+        assert_eq!(encode_key(key(KeyCode::PageDown), false), b"\x1b[6~");
+        assert_eq!(encode_key(key(KeyCode::Insert), false), b"\x1b[2~");
+        assert_eq!(encode_key(key(KeyCode::BackTab), false), b"\x1b[Z");
+    }
+
+    #[test]
+    fn function_keys() {
+        assert_eq!(encode_key(key(KeyCode::F(1)), false), b"\x1bOP");
+        assert_eq!(encode_key(key(KeyCode::F(4)), false), b"\x1bOS");
+        assert_eq!(encode_key(key(KeyCode::F(5)), false), b"\x1b[15~");
+        assert_eq!(encode_key(key(KeyCode::F(12)), false), b"\x1b[24~");
+    }
+
+    #[test]
+    fn cursor_keys_honour_application_mode_and_modifiers() {
+        assert_eq!(encode_key(key(KeyCode::Up), false), b"\x1b[A");
+        assert_eq!(encode_key(key(KeyCode::Up), true), b"\x1bOA");
+        assert_eq!(encode_key(key_mod(KeyCode::Right, KeyModifiers::CONTROL), false), b"\x1b[1;5C");
+        assert_eq!(encode_key(key_mod(KeyCode::Left, KeyModifiers::SHIFT | KeyModifiers::ALT), true), b"\x1b[1;4D");
+    }
+
+    #[test]
+    fn alt_char_is_escape_prefixed() {
+        assert_eq!(encode_key(key_mod(KeyCode::Char('x'), KeyModifiers::ALT), false), b"\x1bx");
+    }
 }

@@ -116,10 +116,17 @@ impl ProcessPane {
 
     pub fn add_line(&mut self, line: Line<'static>) {
         self.logs.push_back(line);
-        if let Some(logs_max_size) = self.logs_max_size {
-            if self.logs.len() > logs_max_size {
-                self.logs.pop_front();
-            }
+        let Some(logs_max_size) = self.logs_max_size else {
+            return;
+        };
+        if self.logs.len() <= logs_max_size {
+            return;
+        }
+        self.logs.pop_front();
+        // Dropping the oldest line shifts every index by one: move a scrolled
+        // viewport along with it so the user keeps looking at the same lines.
+        if let Some(top) = self.view_top_index {
+            self.view_top_index = Some(top.saturating_sub(1));
         }
     }
 
@@ -161,5 +168,65 @@ impl ProcessPane {
             LogMode::Truncate => LogMode::Wrap,
             LogMode::Wrap => LogMode::Truncate,
         };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{PaneMode, RunMode};
+
+    fn pane(max: Option<usize>) -> ProcessPane {
+        let cfg = ProcessConfig {
+            name: "p".into(),
+            title: "p".into(),
+            cmd: vec!["true".into()],
+            link: None,
+            cwd: None,
+            watch: vec![],
+            watch_settle_time_ms: 800,
+            mode: PaneMode::Log,
+            auto_start: false,
+            auto_restart: false,
+            grace_period: 0,
+            run_mode: RunMode::Exec,
+        };
+        ProcessPane::new(0, max, cfg)
+    }
+
+    fn text(p: &ProcessPane, idx: usize) -> String {
+        p.logs[idx].spans.iter().map(|s| s.content.to_string()).collect()
+    }
+
+    #[test]
+    fn scrolled_view_stays_anchored_when_buffer_is_full() {
+        let mut p = pane(Some(3));
+        for i in 0..3 {
+            p.add_line(Line::from(format!("l{i}")));
+        }
+        p.view_top_index = Some(1); // looking at l1
+        p.add_line(Line::from("l3")); // evicts l0
+        assert_eq!(p.logs.len(), 3);
+        assert_eq!(p.view_top_index, Some(0));
+        assert_eq!(text(&p, 0), "l1");
+    }
+
+    #[test]
+    fn tail_view_is_unaffected_by_eviction() {
+        let mut p = pane(Some(2));
+        p.add_line(Line::from("a"));
+        p.add_line(Line::from("b"));
+        p.add_line(Line::from("c"));
+        assert_eq!(p.view_top_index, None);
+        assert_eq!(text(&p, 0), "b");
+    }
+
+    #[test]
+    fn unbounded_buffer_never_evicts() {
+        let mut p = pane(None);
+        for i in 0..100 {
+            p.add_line(Line::from(format!("{i}")));
+        }
+        assert_eq!(p.logs.len(), 100);
     }
 }

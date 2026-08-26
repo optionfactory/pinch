@@ -56,13 +56,12 @@ pub fn show_processes(
             .iter()
             .find(|p| p.name == name)
             .ok_or_else(|| format!("Process with name '{}' not found in configuration", name))?;
-        let cmd_str = proc.cmd.join(" ");
-        render_single(&cmd_str, format)?;
+        render_single(&format_command_args(proc.cmd.clone()), format)?;
     } else {
         let sorted: BTreeMap<String, String> = config
             .processes
             .iter()
-            .map(|p| (p.name.clone(), p.cmd.join(" ")))
+            .map(|p| (p.name.clone(), format_command_args(p.cmd.clone())))
             .collect();
         render_map(&sorted, format)?;
     }
