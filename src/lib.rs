@@ -1,17 +1,9 @@
-pub mod schema;
-pub mod vars;
-
-#[cfg(feature = "supervisor")]
 pub mod cli;
-#[cfg(feature = "supervisor")]
 pub mod config;
-#[cfg(feature = "supervisor")]
 pub mod networks;
-#[cfg(feature = "supervisor")]
 pub mod processes;
-#[cfg(feature = "supervisor")]
 pub mod runners;
-#[cfg(feature = "supervisor")]
+pub mod schema;
 pub mod supervisor;
-#[cfg(feature = "supervisor")]
 pub mod ui;
+pub mod vars;
