@@ -75,11 +75,11 @@ impl PinchManifest {
                 let final_cwd = raw
                     .cwd
                     .as_ref()
-                    .map(|c| PathBuf::from(apply_vars(c, &context_vars, false)));
+                    .map(|c| PathBuf::from(apply_vars(c, &context_vars)));
                 let mut watch_paths = Vec::new();
                 if let Some(watches) = &raw.watch {
                     for w in watches {
-                        watch_paths.push(PathBuf::from(apply_vars(w, &context_vars, false)));
+                        watch_paths.push(PathBuf::from(apply_vars(w, &context_vars)));
                     }
                 }
                 let run_ctx = RunContext {
@@ -91,7 +91,7 @@ impl PinchManifest {
                     background,
                 };
                 let built = raw.run.build_command(&run_ctx)?;
-                let link = raw.link.as_ref().map(|l| apply_vars(l, &context_vars, false));
+                let link = raw.link.as_ref().map(|l| apply_vars(l, &context_vars));
                 let watch_settle_time_ms = raw.watch_settle_time_ms.or(global_watch_settle).unwrap_or(800);
                 Ok(ProcessConfig {
                     name: raw.name.clone(),

@@ -183,6 +183,17 @@ Variables defined as `{{var_name}}` inside your YAML file are resolved using a s
 | **2** | **YAML `vars:` block** | Project defaults defined in `pinch.yaml` | `env: "dev"` |
 | **3 (Lowest)** | **Built-in Variables** | System path context | `{{pwd}}`, `{{user}}`, `{{home}}` |
 
+### Expansion Semantics
+
+Substitution is **textual** and happens *before* the command string is parsed, so a value is spliced verbatim into the surrounding text (like a Makefile variable or an unquoted `$VAR` in a shell):
+
+* A value containing spaces produces several arguments: `flags: "-c 10"` in `ping {{ target }} {{ flags }}` yields `ping 8.8.8.8 -c 10`.
+* To keep a value with spaces as a single argument, quote the placeholder in the template: `ls "{{ dir }}"`.
+* Quotes inside a value are interpreted by the command parser exactly as if written inline, e.g. `opts: "-Dfoo='a b'"` used as `java {{ opts }}` passes a single `-Dfoo=a b` argument.
+* Unknown placeholders are left untouched.
+
+The same textual rule applies to every other expanded field (`image`, `cwd`, `link`, mount `source`/`target`, `env` values, ...), where the value is used as-is with no parsing at all.
+
 
 ```bash
 # Check the resolved value of a variable

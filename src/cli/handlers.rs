@@ -114,7 +114,7 @@ fn used_containers(
     if let Some(processes) = &manifest.processes {
         for proc in processes {
             if let crate::config::RunManifest::Detailed(crate::config::RunKind::Docker(ref docker_cfg)) = proc.run {
-                let resolved_image = apply_vars(&docker_cfg.image, context_vars, false);
+                let resolved_image = apply_vars(&docker_cfg.image, context_vars);
                 images.insert(resolved_image);
             }
         }

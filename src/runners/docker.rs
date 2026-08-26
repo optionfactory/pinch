@@ -5,7 +5,7 @@ use crate::runners::{BuildOutput, BuildResult, RunBuilder, RunContext};
 use crate::vars::apply_vars;
 
 fn expand(value: &str, vars: &HashMap<String, String>) -> String {
-    apply_vars(value, vars, false).trim().to_string()
+    apply_vars(value, vars).trim().to_string()
 }
 
 fn render_mount(mount: &DockerMountConfig, vars: &HashMap<String, String>) -> Option<String> {

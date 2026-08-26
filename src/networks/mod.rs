@@ -7,17 +7,17 @@ pub fn build_docker_network_command(
     config: &DockerNetworkConfig,
     vars: &HashMap<String, String>,
 ) -> Vec<String> {
-    let net_name = apply_vars(net_key, vars, false);
+    let net_name = apply_vars(net_key, vars);
     let mut cmd_args = vec!["docker".to_string(), "network".to_string(), "create".to_string()];
     cmd_args.push("-o".to_string());
     cmd_args.push(format!("com.docker.network.bridge.name={}", net_name));
     cmd_args.push("--subnet".to_string());
-    cmd_args.push(apply_vars(config.subnet(), vars, false));
+    cmd_args.push(apply_vars(config.subnet(), vars));
     cmd_args.push("-d".to_string());
     cmd_args.push("bridge".to_string());
     if let Some(args_list) = config.args() {
         for arg in args_list {
-            cmd_args.push(apply_vars(arg, vars, false));
+            cmd_args.push(apply_vars(arg, vars));
         }
     }
     cmd_args.push(net_name);
@@ -30,7 +30,7 @@ pub fn ensure_docker_network(
     vars: &HashMap<String, String>,
 ) -> Result<(), String> {
     use std::process::Command;
-    let net_name = apply_vars(net_key, vars, false);
+    let net_name = apply_vars(net_key, vars);
     let status = Command::new("docker")
         .args(["network", "inspect", &net_name])
         .stdout(std::process::Stdio::null())
