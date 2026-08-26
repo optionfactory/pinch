@@ -46,13 +46,21 @@ impl PinchManifest {
         context_vars
     }
 
-    pub fn prepare(&self, cli_vars: HashMap<String, String>, background: bool) -> Result<PinchConfig, String> {
+    /// Rejects manifests written for a schema version this binary does not
+    /// understand. Called once right after parsing so every subcommand (not
+    /// only the ones that build commands) refuses an incompatible file.
+    pub fn validate_schema_version(&self) -> Result<(), String> {
         if self.schema_version != 1 {
             return Err(format!(
                 "Unsupported schema_version '{}'. Only version 1 is supported.",
                 self.schema_version
             ));
         }
+        Ok(())
+    }
+
+    pub fn prepare(&self, cli_vars: HashMap<String, String>, background: bool) -> Result<PinchConfig, String> {
+        self.validate_schema_version()?;
         let context_vars = self.resolve_vars(&cli_vars);
         let name = self.name.clone();
         let global_shell = self.shell;
@@ -115,5 +123,26 @@ impl PinchManifest {
             logs_max_size: global_logs_max_size,
             layout,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn manifest(yaml: &str) -> PinchManifest {
+        serde_saphyr::from_str(yaml).expect("valid manifest")
+    }
+
+    #[test]
+    fn accepts_schema_version_1() {
+        assert!(manifest("schema_version: 1\nname: x\n").validate_schema_version().is_ok());
+    }
+
+    #[test]
+    fn rejects_other_schema_versions() {
+        let err = manifest("schema_version: 2\nname: x\n").validate_schema_version().unwrap_err();
+        assert_eq!(err, "Unsupported schema_version '2'. Only version 1 is supported.");
+        assert!(manifest("schema_version: 0\nname: x\n").validate_schema_version().is_err());
     }
 }

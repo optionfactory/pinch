@@ -34,6 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let reader = BufReader::new(file);
     let raw_config: PinchManifest =
         serde_saphyr::from_reader(reader).map_err(|e| format!("Failed to parse YAML config: {}", e))?;
+    raw_config.validate_schema_version()?;
     match parsed.action {
         CliAction::Configuration(cmd) => match cmd {
             ConfigurationCommand::Show { format } => {
