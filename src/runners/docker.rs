@@ -56,9 +56,9 @@ impl DockerRunConfig {
 }
 
 fn shlex_tokens(value: &str, vars: &HashMap<String, String>, name: &str) -> Result<Vec<String>, String> {
-    shlex::split(&expand(value, vars))
-        .filter(|tokens| !tokens.is_empty())
-        .ok_or_else(|| format!("Failed to parse docker run flags for '{}': {}", name, value))
+    // `shlex::split` only fails on malformed quoting; an empty string (e.g. a
+    // conditional var that expanded to nothing) yields no tokens and is fine.
+    shlex::split(&expand(value, vars)).ok_or_else(|| format!("Failed to parse docker run flags for '{}': {}", name, value))
 }
 
 impl RunBuilder for DockerRunConfig {
@@ -334,6 +334,22 @@ mod tests {
             out.contains(&"type=bind,source=/opt/my app/nginx.conf,target=/opt/my app/nginx.conf,readonly".to_string())
         );
         assert!(out.contains(&"hello world:/data".to_string()));
+    }
+
+    #[test]
+    fn empty_opts_and_args_are_ignored() {
+        let mut vars = HashMap::new();
+        vars.insert("extra".to_string(), String::new());
+        let cfg = docker_cfg(r#"{ "image": "i", "opts": "", "args": " {{ extra }} " }"#);
+        let out = cfg.build_command(&ctx(&vars)).unwrap().cmd;
+        assert_eq!(out, vec!["docker", "run", "-ti", "--rm", "--name", "test", "i"]);
+    }
+
+    #[test]
+    fn malformed_quoting_in_opts_is_still_an_error() {
+        let vars = HashMap::new();
+        let cfg = docker_cfg(r#"{ "image": "i", "opts": "--label 'unterminated" }"#);
+        assert!(cfg.build_command(&ctx(&vars)).is_err());
     }
 
     #[test]
