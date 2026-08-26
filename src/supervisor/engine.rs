@@ -68,6 +68,10 @@ impl Supervisor {
         supervisor
     }
 
+    /// Upper bound on events handled between two redraws: keeps a log firehose
+    /// from starving the display while still collapsing bursts into one frame.
+    const MAX_EVENTS_PER_FRAME: usize = 256;
+
     pub async fn run(
         &mut self,
         terminal: &mut ratatui::Terminal<ratatui::backend::CrosstermBackend<std::io::Stdout>>,
@@ -75,30 +79,38 @@ impl Supervisor {
         mut logs_rx: mpsc::Receiver<SupervisorEvent>,
     ) -> Result<(), String> {
         let mut fatal_error = None;
-        loop {
+        'frames: loop {
             if let Ok(size) = crossterm::terminal::size() {
                 self.sync_pty_sizes(size.0, size.1);
             }
             if let Err(e) = terminal.draw(|f| crate::ui::rendering::draw(&self.state, f)) {
                 return Err(format!("Terminal draw failed: {}", e));
             }
-            let event_opt = tokio::select! {
+            // Block for the first event, then coalesce whatever is already
+            // queued so a burst of log lines costs one redraw, not one each.
+            // UI events are drained first so input keeps priority over logs.
+            let first = tokio::select! {
                 biased;
-                Some(ev) = ui_rx.recv() => Some(ev),
-                Some(ev) = logs_rx.recv() => Some(ev),
-                else => None,
+                Some(ev) = ui_rx.recv() => ev,
+                Some(ev) = logs_rx.recv() => ev,
+                else => break,
             };
-            if let Some(event) = event_opt {
+            let mut batch = vec![first];
+            while batch.len() < Self::MAX_EVENTS_PER_FRAME {
+                match ui_rx.try_recv().or_else(|_| logs_rx.try_recv()) {
+                    Ok(ev) => batch.push(ev),
+                    Err(_) => break,
+                }
+            }
+            for event in batch {
                 if let SupervisorEvent::Error(msg) = &event {
                     fatal_error = Some(msg.clone());
-                    break;
+                    break 'frames;
                 }
                 self.handle_event(event);
                 if self.state.should_quit {
-                    break;
+                    break 'frames;
                 }
-            } else {
-                break;
             }
         }
         if let Some(err) = fatal_error { Err(err) } else { Ok(()) }
