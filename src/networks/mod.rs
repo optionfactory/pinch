@@ -2,12 +2,41 @@ use crate::config::{DockerNetworkConfig, PinchManifest};
 use crate::vars::apply_vars;
 use std::collections::HashMap;
 
+/// Linux `IFNAMSIZ` is 16 bytes including the terminating NUL.
+const MAX_BRIDGE_NAME_BYTES: usize = 15;
+
+/// The network name doubles as the host bridge interface name
+/// (`-o com.docker.network.bridge.name=<name>`), so it must be a valid Linux
+/// interface name; docker's own error for this ("numerical result out of
+/// range") is unhelpful, so check up front.
+pub fn validate_bridge_name(net_name: &str) -> Result<(), String> {
+    if net_name.is_empty() {
+        return Err("Docker network name is empty after variable expansion".to_string());
+    }
+    if net_name.len() > MAX_BRIDGE_NAME_BYTES {
+        return Err(format!(
+            "Docker network name '{}' is {} bytes long; it is also used as the host bridge interface name, which Linux limits to {} bytes. Use a shorter name.",
+            net_name,
+            net_name.len(),
+            MAX_BRIDGE_NAME_BYTES
+        ));
+    }
+    if net_name.contains(['/', ':']) || net_name.chars().any(char::is_whitespace) {
+        return Err(format!(
+            "Docker network name '{}' contains characters not allowed in a Linux interface name ('/', ':' or whitespace).",
+            net_name
+        ));
+    }
+    Ok(())
+}
+
 pub fn build_docker_network_command(
     net_key: &str,
     config: &DockerNetworkConfig,
     vars: &HashMap<String, String>,
 ) -> Result<Vec<String>, String> {
     let net_name = apply_vars(net_key, vars);
+    validate_bridge_name(&net_name)?;
     let mut cmd_args = vec!["docker".to_string(), "network".to_string(), "create".to_string()];
     cmd_args.push("-o".to_string());
     cmd_args.push(format!("com.docker.network.bridge.name={}", net_name));
@@ -32,6 +61,7 @@ pub fn ensure_docker_network(
 ) -> Result<(), String> {
     use std::process::Command;
     let net_name = apply_vars(net_key, vars);
+    validate_bridge_name(&net_name)?;
     let status = Command::new("docker")
         .args(["network", "inspect", &net_name])
         .stdout(std::process::Stdio::null())
@@ -148,6 +178,40 @@ mod tests {
         );
         let vars = m.resolve_vars(&HashMap::new());
         assert!(build_docker_network_command("adv", &m.docker_networks.as_ref().unwrap()["adv"], &vars).is_err());
+    }
+
+    #[test]
+    fn bridge_name_at_the_limit_is_accepted() {
+        assert_eq!("cnlogistics-tms".len(), 15);
+        assert!(validate_bridge_name("cnlogistics-tms").is_ok());
+        assert!(validate_bridge_name("hi").is_ok());
+    }
+
+    #[test]
+    fn bridge_name_over_the_limit_is_rejected_with_a_clear_message() {
+        let err = validate_bridge_name("cnlogistics-tms2").unwrap_err();
+        assert!(err.contains("16 bytes"), "{err}");
+        assert!(err.contains("15 bytes"), "{err}");
+    }
+
+    #[test]
+    fn bridge_name_is_validated_after_expansion() {
+        let m = manifest("schema_version: 1\nname: x\nvars:\n  env: staging\ndocker_networks:\n  simple_net_{{ env }}: 10.0.0.0/24\n");
+        let vars = m.resolve_vars(&HashMap::new());
+        let (key, cfg) = m.docker_networks.as_ref().unwrap().iter().next().unwrap();
+        let err = build_docker_network_command(key, cfg, &vars).unwrap_err();
+        assert!(err.contains("simple_net_staging"), "{err}");
+        // a short value is fine
+        let mut short = HashMap::new();
+        short.insert("env".to_string(), "dev".to_string());
+        assert!(build_docker_network_command(key, cfg, &m.resolve_vars(&short)).is_ok());
+    }
+
+    #[test]
+    fn bridge_name_rejects_interface_unsafe_characters() {
+        assert!(validate_bridge_name("a/b").is_err());
+        assert!(validate_bridge_name("a b").is_err());
+        assert!(validate_bridge_name("").is_err());
     }
 
     #[test]
