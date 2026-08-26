@@ -48,6 +48,7 @@ impl RunBuilder for crate::config::DockerIntrudeRunConfig {
         Ok(BuildOutput {
             cmd: cmd_vec,
             run_mode: if ctx.background { RunMode::Spawn } else { RunMode::Exec },
+            container: None,
         })
     }
 }

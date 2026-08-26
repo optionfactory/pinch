@@ -9,6 +9,7 @@ impl RunBuilder for crate::config::ProcessRunConfig {
         Ok(BuildOutput {
             cmd: cmd_vec,
             run_mode: if ctx.background { RunMode::Spawn } else { RunMode::Exec },
+            container: None,
         })
     }
 }
@@ -85,6 +86,22 @@ mod tests {
             build("ping {{ flags }} 8.8.8.8", Some(WrappingShell::Bash), &v),
             vec!["bash", "-c", "ping -c 10 8.8.8.8"]
         );
+    }
+
+    #[test]
+    fn plain_processes_have_no_container_reference() {
+        let v = vars(&[]);
+        let networks = HashMap::new();
+        let ctx = RunContext {
+            name: "test",
+            vars: &v,
+            global_shell: None,
+            default_docker_network: None,
+            defined_networks: &networks,
+            background: false,
+        };
+        let run = RunManifest::Shorthand("true".to_string());
+        assert_eq!(run.build_command(&ctx).unwrap().container, None);
     }
 
     #[test]

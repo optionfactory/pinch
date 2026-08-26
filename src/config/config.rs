@@ -20,6 +20,14 @@ pub enum RunMode {
     Exec,
 }
 
+/// The container a docker-type process runs, so the supervisor can stop it
+/// through the engine when signalling the `docker run` client is not enough.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ContainerRef {
+    pub engine: String,
+    pub name: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct ProcessConfig {
     pub name: String,
@@ -34,6 +42,7 @@ pub struct ProcessConfig {
     pub auto_restart: bool,
     pub grace_period: u64,
     pub run_mode: RunMode,
+    pub container: Option<ContainerRef>,
 }
 
 impl PinchManifest {
@@ -114,6 +123,7 @@ impl PinchManifest {
                     auto_restart: raw.auto_restart.or(global_auto_restart).unwrap_or(true),
                     grace_period: raw.grace_period.or(global_grace_period).unwrap_or(3000),
                     run_mode: built.run_mode,
+                    container: built.container,
                 })
             })
             .collect();

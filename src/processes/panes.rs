@@ -1,4 +1,4 @@
-use crate::config::ProcessConfig;
+use crate::config::{ContainerRef, ProcessConfig};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use std::collections::VecDeque;
@@ -39,6 +39,33 @@ pub struct ProcessPane {
 const INTERRUPT_GRACE: Duration = Duration::from_secs(3);
 // Generous: a database flushing a real datadir on shutdown takes a while.
 const TERMINATE_GRACE: Duration = Duration::from_secs(30);
+// `<engine> stop` grace before the engine SIGKILLs the container itself.
+const CONTAINER_STOP_TIMEOUT_SECS: u64 = 10;
+// How long to wait for the `docker run` client to notice its container is gone.
+const CONTAINER_STOP_GRACE: Duration = Duration::from_secs(15);
+
+/// Stops a container through its engine. Unlike signalling the `docker run`
+/// client, the engine's own SIGKILL lands on the container, so the client then
+/// exits by itself and `--rm` still cleans up.
+async fn stop_container(container: &ContainerRef) {
+    let stop = tokio::process::Command::new(&container.engine)
+        .args(["stop", "-t", &CONTAINER_STOP_TIMEOUT_SECS.to_string(), &container.name])
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .await;
+    if matches!(stop, Ok(status) if status.success()) {
+        return;
+    }
+    let _ = tokio::process::Command::new(&container.engine)
+        .args(["kill", &container.name])
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .await;
+}
 
 async fn exited_within(child: &mut Box<dyn portable_pty::Child + Send + Sync>, within: Duration) -> bool {
     let deadline = tokio::time::Instant::now() + within;
@@ -92,6 +119,7 @@ impl ProcessPane {
         }
 
         let mut child = self.child_process.take()?;
+        let container = self.config.container.clone();
         Some(tokio::spawn(async move {
             // Some workloads ignore SIGINT (mysqld does), and SIGKILL only reaps the
             // `docker run` client, leaving its container alive.
@@ -101,6 +129,15 @@ impl ProcessPane {
             signal_group(&*child, libc::SIGTERM);
             if exited_within(&mut child, TERMINATE_GRACE).await {
                 return;
+            }
+            // A container whose PID 1 ignores SIGTERM (e.g. a `sh -c` entrypoint
+            // without `exec`) is still alive here: ask the engine to stop it so
+            // the SIGKILL hits the container rather than just the client.
+            if let Some(container) = &container {
+                stop_container(container).await;
+                if exited_within(&mut child, CONTAINER_STOP_GRACE).await {
+                    return;
+                }
             }
             let _ = tokio::task::spawn_blocking(move || {
                 if child.process_id().is_some_and(|p| p > 1) {
@@ -190,8 +227,62 @@ mod tests {
             auto_restart: false,
             grace_period: 0,
             run_mode: RunMode::Exec,
+            container: None,
         };
         ProcessPane::new(0, max, cfg)
+    }
+
+    /// Requires a docker daemon and a local image with `sh` (`PINCH_TEST_IMAGE`,
+    /// default `alpine`). Takes ~45s. Run with `cargo test -- --ignored stubborn_container`.
+    #[tokio::test]
+    #[ignore]
+    async fn stubborn_container_is_stopped_through_the_engine() {
+        let image = std::env::var("PINCH_TEST_IMAGE").unwrap_or_else(|_| "alpine".to_string());
+        let name = "pinch-test-stubborn";
+        let _ = std::process::Command::new("docker").args(["rm", "-f", name]).output();
+        let mut p = pane(None);
+        // PID 1 is a shell that ignores INT and TERM: neither ^C nor the proxied
+        // SIGTERM can stop it, which is the case that used to leak the container.
+        p.config.cmd = vec![
+            "docker".into(), "run".into(), "-ti".into(), "--rm".into(), "--name".into(), name.into(),
+            "--entrypoint".into(), "sh".into(), image,
+            "-c".into(), "trap '' INT TERM; while true; do sleep 1; done".into(),
+        ];
+        p.config.container = Some(ContainerRef { engine: "docker".into(), name: name.into() });
+        let (tx, _rx) = tokio::sync::mpsc::channel(64);
+        let handle = crate::processes::ptys::spawn_process(0, &p.config, tx).expect("spawned");
+        p.child_process = Some(handle.child);
+        p.pty_writer = Some(handle.writer);
+        p.pty_master = Some(handle.master);
+        let running = || {
+            let out = std::process::Command::new("docker")
+                .args(["ps", "-q", "-f", &format!("name=^{name}$")])
+                .output()
+                .unwrap();
+            !out.stdout.is_empty()
+        };
+        for _ in 0..100 {
+            if running() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        assert!(running(), "container did not start");
+        // Still alive after a moment: the entrypoint really is our stubborn shell.
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        assert!(running(), "container exited on its own; the test image does not run our shell");
+        let started = std::time::Instant::now();
+        p.terminate().unwrap().await.unwrap();
+        let elapsed = started.elapsed();
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        assert!(!running(), "container leaked after terminate()");
+        // It must have survived ^C and the proxied SIGTERM (otherwise the test proves
+        // nothing) and been stopped by the engine before the SIGKILL fallback.
+        assert!(elapsed >= INTERRUPT_GRACE + TERMINATE_GRACE, "stopped too early: {elapsed:?}");
+        assert!(
+            elapsed < INTERRUPT_GRACE + TERMINATE_GRACE + Duration::from_secs(CONTAINER_STOP_TIMEOUT_SECS) + Duration::from_secs(5),
+            "took {elapsed:?}: reached the SIGKILL fallback?"
+        );
     }
 
     fn text(p: &ProcessPane, idx: usize) -> String {

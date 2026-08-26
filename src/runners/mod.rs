@@ -3,7 +3,7 @@ mod docker_intrude;
 mod process;
 
 use crate::{
-    config::{DockerNetworkConfig, ProcessRunConfig, RunKind, RunManifest, RunMode},
+    config::{ContainerRef, DockerNetworkConfig, ProcessRunConfig, RunKind, RunManifest, RunMode},
     schema::WrappingShell,
 };
 use std::collections::HashMap;
@@ -12,6 +12,8 @@ use std::collections::HashMap;
 pub struct BuildOutput {
     pub cmd: Vec<String>,
     pub run_mode: RunMode,
+    /// Set for docker-type processes only.
+    pub container: Option<ContainerRef>,
 }
 
 pub type BuildResult = Result<BuildOutput, String>;

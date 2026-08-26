@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use crate::config::{ContainerEngine, DockerMountConfig, DockerRunConfig, RunMode};
+use crate::config::{ContainerEngine, ContainerRef, DockerMountConfig, DockerRunConfig, RunMode};
 use crate::runners::{BuildOutput, BuildResult, RunBuilder, RunContext};
 use crate::vars::apply_vars;
 
@@ -81,7 +81,7 @@ impl RunBuilder for DockerRunConfig {
             .filter(|n| !n.is_empty())
             .unwrap_or_else(|| ctx.name.to_string());
         tokens.push("--name".to_string());
-        tokens.push(container_name);
+        tokens.push(container_name.clone());
         // Same defaulting as 'docker-intrude': fall back to the single network
         // defined in 'docker_networks' when no explicit network is configured.
         let network = self.network.as_deref().or(ctx.default_docker_network.map(String::as_str));
@@ -136,6 +136,10 @@ impl RunBuilder for DockerRunConfig {
         Ok(BuildOutput {
             cmd: tokens,
             run_mode: RunMode::Exec,
+            container: Some(ContainerRef {
+                engine: self.engine_binary().to_string(),
+                name: container_name,
+            }),
         })
     }
 }
@@ -259,6 +263,18 @@ mod tests {
                 "daemon off;"
             ]
         );
+    }
+
+    #[test]
+    fn exposes_container_reference_for_the_supervisor() {
+        let vars = HashMap::new();
+        let cfg = docker_cfg(r#"{ "image": "i" }"#);
+        let out = cfg.build_command(&ctx(&vars)).unwrap();
+        assert_eq!(out.container, Some(ContainerRef { engine: "docker".into(), name: "test".into() }));
+
+        let cfg = docker_cfg(r#"{ "engine": "podman", "image": "i", "name": "custom" }"#);
+        let out = cfg.build_command(&ctx(&vars)).unwrap();
+        assert_eq!(out.container, Some(ContainerRef { engine: "podman".into(), name: "custom".into() }));
     }
 
     #[test]
