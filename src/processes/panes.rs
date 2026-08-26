@@ -2,6 +2,7 @@ use crate::config::ProcessConfig;
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
 use std::collections::VecDeque;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LogMode {
@@ -35,6 +36,31 @@ pub struct ProcessPane {
     pub pty_writer: Option<Box<dyn std::io::Write + Send>>,
 }
 
+const INTERRUPT_GRACE: Duration = Duration::from_secs(3);
+// Generous: a database flushing a real datadir on shutdown takes a while.
+const TERMINATE_GRACE: Duration = Duration::from_secs(30);
+
+async fn exited_within(child: &mut Box<dyn portable_pty::Child + Send + Sync>, within: Duration) -> bool {
+    let deadline = tokio::time::Instant::now() + within;
+    loop {
+        if matches!(child.try_wait(), Ok(Some(_))) {
+            return true;
+        }
+        if tokio::time::Instant::now() >= deadline {
+            return false;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+}
+
+fn signal_group(child: &(dyn portable_pty::Child + Send + Sync), signal: libc::c_int) {
+    if let Some(pid) = child.process_id().filter(|&p| p > 1) {
+        unsafe {
+            libc::kill(-(pid as libc::pid_t), signal);
+        }
+    }
+}
+
 impl ProcessPane {
     pub fn new(id: usize, logs_max_size: Option<usize>, config: ProcessConfig) -> Self {
         Self {
@@ -64,18 +90,18 @@ impl ProcessPane {
 
         let mut child = self.child_process.take()?;
         Some(tokio::spawn(async move {
-            for _ in 0..30 {
-                if matches!(child.try_wait(), Ok(Some(_))) {
-                    return;
-                }
-                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            // Some workloads ignore SIGINT (mysqld does), and SIGKILL only reaps the
+            // `docker run` client, leaving its container alive.
+            if exited_within(&mut child, INTERRUPT_GRACE).await {
+                return;
+            }
+            signal_group(&*child, libc::SIGTERM);
+            if exited_within(&mut child, TERMINATE_GRACE).await {
+                return;
             }
             let _ = tokio::task::spawn_blocking(move || {
-                if let Some(pid) = child.process_id().filter(|&p| p > 1) {
-                    // Kill entire process group (-pid) to clean up sub-processes and prevent orphans
-                    unsafe {
-                        libc::kill(-(pid as libc::pid_t), libc::SIGKILL);
-                    }
+                if child.process_id().is_some_and(|p| p > 1) {
+                    signal_group(&*child, libc::SIGKILL);
                 } else {
                     let _ = child.kill();
                 }
