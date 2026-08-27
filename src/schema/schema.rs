@@ -231,7 +231,7 @@ pub struct DockerRunConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<String>")]
     pub volumes: Option<Vec<String>>,
-    #[doc = "Id swaps `docker-bluff` applies to the container's bind mounts, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). When set, `docker run` is launched under docker-bluff so its `-v`/`--mount` sources are idmapped. (There is no `remap_paths` for `type: docker` — docker-bluff discovers the run's mounts itself.)"]
+    #[doc = "Id swaps `docker-bluff` applies to the container's bind mounts, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). When set, `docker run` is launched under docker-bluff so its `-v`/`--mount` sources are idmapped. (There is no `remap_paths` for `type: docker`, docker-bluff discovers the run's mounts itself.)"]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<String>")]
     pub remap_ids: Option<Vec<String>>,

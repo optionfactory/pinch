@@ -56,7 +56,7 @@ curl -sSL \
 
 > **Note:** Adding `remap_ids` to any process (see below) runs it through [`docker-bluff`](https://github.com/optionfactory/docker-heist), which must then be installed and accessible in your system's `PATH`.
 
-> **Note:** When it runs privileged, `docker-bluff` resolves the program it launches against a fixed secure `PATH` (`/usr/local/bin`, `/usr/bin`, `/bin`, ...), **not** your shell's `PATH`. So a bare `cmd: "mvn"` may resolve to a different binary — or not be found — if it lives somewhere like `~/.local/bin`. Give an absolute path, or run it via `shell: bash` (the shell then resolves the inner command against your inherited `PATH`).
+> **Note:** When it runs privileged, `docker-bluff` resolves the program it launches against a fixed secure `PATH` (`/usr/local/bin`, `/usr/bin`, `/bin`, ...), **not** your shell's `PATH`. So a bare `cmd: "mvn"` may resolve to a different binary, or not be found, if it lives somewhere like `~/.local/bin`. Give an absolute path, or run it via `shell: bash` (the shell then resolves the inner command against your inherited `PATH`).
 
 ### 2. Build from Source
 Ensure you have the Rust toolchain installed, then clone the repository and build:

@@ -430,7 +430,7 @@
               }
             },
             "remap_ids": {
-              "description": "Id swaps `docker-bluff` applies to the container's bind mounts, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). When set, `docker run` is launched under docker-bluff so its `-v`/`--mount` sources are idmapped. (There is no `remap_paths` for `type: docker` — docker-bluff discovers the run's mounts itself.)",
+              "description": "Id swaps `docker-bluff` applies to the container's bind mounts, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). When set, `docker run` is launched under docker-bluff so its `-v`/`--mount` sources are idmapped. (There is no `remap_paths` for `type: docker`, docker-bluff discovers the run's mounts itself.)",
               "type": "array",
               "items": {
                 "type": "string"
