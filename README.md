@@ -52,7 +52,11 @@ curl -sSL \
   && sudo chmod +x /usr/local/bin/pinch
 ```
 
-> **Note:** Using processes configured with `type: "docker-intrude"` requires [`docker-intrude`](https://github.com/optionfactory/docker-intrude) to be installed and accessible in your system's `PATH`.
+> **Note:** Using processes configured with `type: "docker-intrude"` requires [`docker-intrude`](https://github.com/optionfactory/docker-heist) to be installed and accessible in your system's `PATH`.
+
+> **Note:** Adding `remap_ids` to any process (see below) runs it through [`docker-bluff`](https://github.com/optionfactory/docker-heist), which must then be installed and accessible in your system's `PATH`.
+
+> **Note:** When it runs privileged, `docker-bluff` resolves the program it launches against a fixed secure `PATH` (`/usr/local/bin`, `/usr/bin`, `/bin`, ...), **not** your shell's `PATH`. So a bare `cmd: "mvn"` may resolve to a different binary — or not be found — if it lives somewhere like `~/.local/bin`. Give an absolute path, or run it via `shell: bash` (the shell then resolves the inner command against your inherited `PATH`).
 
 ### 2. Build from Source
 Ensure you have the Rust toolchain installed, then clone the repository and build:
@@ -304,6 +308,8 @@ Each item under `processes` defines a process to supervise:
   * **Process (`type: "process"`)**:
     * `cmd`: The command string to execute.
     * `shell`: Optional shell override (`bash`, `zsh`, `fish`). Runs the command using `shell -c`.
+    * `remap_ids`: Id swaps applied via [`docker-bluff`](https://github.com/optionfactory/docker-heist), one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). Setting it runs the command under docker-bluff so a container-style UID and the host each see the mounted files as their own (no `chown -R`). Any `shell` wrapping is preserved.
+    * `remap_paths`: Directories to remap in place, one per `--map` (`SRC[:DST]`, supports variable expansion). Requires `remap_ids`.
    * **Docker (`type: "docker"`)**: Mirrors the `container` block of `optionfactory.services.bundle`.
      * `engine`: `docker` (default) or `podman`.
      * `name`: Container name passed as `--name` (defaults to the enclosing process name).
@@ -315,11 +321,14 @@ Each item under `processes` defines a process to supervise:
      * `volumes`: A list rendered as `--volume`; empty entries are ignored.
      * `opts`: Raw flags appended verbatim after the rendered ones (e.g. `--name`, `--privileged`).
      * `args`: Arguments passed to the container entrypoint.
+     * `remap_ids`: Id swaps applied via [`docker-bluff`](https://github.com/optionfactory/docker-heist), one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). When set, the `docker run` is launched under docker-bluff, which idmaps its own `-v`/`--mount` bind sources so files stay owned correctly on both sides. (There is **no** `remap_paths` for `type: "docker"` — docker-bluff discovers the run's mounts itself.)
   * **Docker Intrude (`type: "docker-intrude"`)**:
     * `ip`: The target IP address in the network namespace.
     * `network`: (Optional if only one network is defined in `docker_networks`) The Docker network name.
     * `cmd`: The command to execute inside the namespace.
     * `shell`: Optional shell override (`bash`, `zsh`, `fish`). Runs the command using `shell -c`.
+    * `remap_ids`: Id swaps applied via [`docker-bluff`](https://github.com/optionfactory/docker-heist), one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). Setting it runs the command under docker-bluff so a container-style UID and the host each see the mounted files as their own (no `chown -R`). Any `shell` wrapping is preserved.
+    * `remap_paths`: Directories to remap in place, one per `--map` (`SRC[:DST]`, supports variable expansion). Requires `remap_ids`.
 * `mode`: Either `log` (default) or `tui` (allocates a PTY for interactive terminal apps).
 * `cwd`: Working directory (supports variables like `{{pwd}}`).
 * `link`: An optional web URL or link associated with this process.
@@ -366,6 +375,15 @@ processes:
       ip: "172.18.23.100"
       network: "hi"
       cmd: "ping {{ target }} {{ flags }}"
+  - name: "build"
+    run:
+      # remap_ids/remap_paths run this under docker-bluff so build artifacts stay owned by you
+      type: "process"
+      cmd: "make package"
+      remap_ids:
+        - "me:0"
+      remap_paths:
+        - "{{ pwd }}"
 ```
 
 ## Layout Engine

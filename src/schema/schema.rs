@@ -166,6 +166,14 @@ pub struct ProcessRunConfig {
     pub shell: Option<WrappingShell>,
     #[doc = "The command string to execute."]
     pub cmd: String,
+    #[doc = "Directories to remap through `docker-bluff` (Linux idmapped mounts), one per `--map` (`SRC[:DST]`, supports variable expansion), so a container-style UID and the host each see the mounted files as their own. Requires `remap_ids`."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<String>")]
+    pub remap_paths: Option<Vec<String>>,
+    #[doc = "Id swaps `docker-bluff` applies, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). Setting it runs the command under docker-bluff so mounted files are owned correctly on both sides."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<String>")]
+    pub remap_ids: Option<Vec<String>>,
 }
 
 #[doc = "Container engine binary used to spawn a container."]
@@ -223,6 +231,10 @@ pub struct DockerRunConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<String>")]
     pub volumes: Option<Vec<String>>,
+    #[doc = "Id swaps `docker-bluff` applies to the container's bind mounts, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). When set, `docker run` is launched under docker-bluff so its `-v`/`--mount` sources are idmapped. (There is no `remap_paths` for `type: docker` — docker-bluff discovers the run's mounts itself.)"]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<String>")]
+    pub remap_ids: Option<Vec<String>>,
 }
 
 #[doc = "Configuration for a single container mount."]
@@ -265,6 +277,14 @@ pub struct DockerIntrudeRunConfig {
     pub shell: Option<WrappingShell>,
     #[doc = "Host command string to execute within the target network namespace."]
     pub cmd: String,
+    #[doc = "Directories to remap through `docker-bluff` (Linux idmapped mounts), one per `--map` (`SRC[:DST]`, supports variable expansion), so a container-style UID and the host each see the mounted files as their own. Requires `remap_ids`."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<String>")]
+    pub remap_paths: Option<Vec<String>>,
+    #[doc = "Id swaps `docker-bluff` applies, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). Setting it runs the command under docker-bluff so mounted files are owned correctly on both sides."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "Vec<String>")]
+    pub remap_ids: Option<Vec<String>>,
 }
 
 #[doc = "Configuration for creating a Docker bridge network."]

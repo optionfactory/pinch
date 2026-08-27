@@ -1,6 +1,7 @@
 mod docker;
 mod docker_intrude;
 mod process;
+mod remap;
 
 use crate::{
     config::{ContainerRef, DockerNetworkConfig, ProcessRunConfig, RunKind, RunManifest, RunMode},
@@ -17,6 +18,8 @@ pub struct BuildOutput {
 }
 
 pub type BuildResult = Result<BuildOutput, String>;
+
+pub use remap::wrap_with_docker_bluff;
 
 pub struct RunContext<'a> {
     pub name: &'a str,
@@ -38,6 +41,8 @@ impl RunBuilder for RunManifest {
                 let process_run = ProcessRunConfig {
                     shell: ctx.global_shell,
                     cmd: cmd.clone(),
+                    remap_paths: None,
+                    remap_ids: None,
                 };
                 process_run.build_command(ctx)
             }

@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use crate::config::{ContainerEngine, ContainerRef, DockerMountConfig, DockerRunConfig, RunMode};
-use crate::runners::{BuildOutput, BuildResult, RunBuilder, RunContext};
+use crate::runners::{BuildOutput, BuildResult, RunBuilder, RunContext, wrap_with_docker_bluff};
 use crate::vars::apply_vars;
 
 fn expand(value: &str, vars: &HashMap<String, String>) -> String {
@@ -132,9 +132,16 @@ impl RunBuilder for DockerRunConfig {
         if let Some(args) = &self.args {
             tokens.extend(shlex_tokens(args, ctx.vars, ctx.name)?);
         }
+        let cmd = wrap_with_docker_bluff(
+            tokens,
+            self.remap_ids.as_deref(),
+            None,
+            ctx.vars,
+            ctx.name,
+        )?;
 
         Ok(BuildOutput {
-            cmd: tokens,
+            cmd,
             run_mode: RunMode::Exec,
             container: Some(ContainerRef {
                 engine: self.engine_binary().to_string(),
@@ -263,6 +270,20 @@ mod tests {
                 "daemon off;"
             ]
         );
+    }
+
+    #[test]
+    fn remap_ids_launches_the_run_under_docker_bluff() {
+        let vars = HashMap::new();
+        let cfg = docker_cfg(r#"{ "image": "maven:3", "remap_ids": ["me:0"] }"#);
+        let out = cfg.build_command(&ctx(&vars)).unwrap();
+        assert_eq!(
+            out.cmd,
+            vec!["docker-bluff", "--id", "me:0", "--", "docker", "run", "-ti", "--rm", "--name", "test", "maven:3"]
+        );
+        // The container reference is still the docker container, so the supervisor
+        // can stop it through the engine.
+        assert_eq!(out.container, Some(ContainerRef { engine: "docker".into(), name: "test".into() }));
     }
 
     #[test]

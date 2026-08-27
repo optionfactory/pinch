@@ -1,13 +1,20 @@
 use crate::config::RunMode;
-use crate::runners::{BuildOutput, BuildResult, RunBuilder, RunContext, parse_command_string};
+use crate::runners::{BuildOutput, BuildResult, RunBuilder, RunContext, parse_command_string, wrap_with_docker_bluff};
 use crate::vars::apply_vars;
 
 impl RunBuilder for crate::config::ProcessRunConfig {
     fn build_command(&self, ctx: &RunContext) -> BuildResult {
         let expanded_cmd = apply_vars(self.cmd.trim(), ctx.vars);
         let cmd_vec = parse_command_string(&expanded_cmd, self.shell.or(ctx.global_shell), ctx.name)?;
+        let cmd = wrap_with_docker_bluff(
+            cmd_vec,
+            self.remap_ids.as_deref(),
+            self.remap_paths.as_deref(),
+            ctx.vars,
+            ctx.name,
+        )?;
         Ok(BuildOutput {
-            cmd: cmd_vec,
+            cmd,
             run_mode: if ctx.background { RunMode::Spawn } else { RunMode::Exec },
             container: None,
         })
@@ -37,6 +44,8 @@ mod tests {
         let run = RunManifest::Detailed(RunKind::Process(ProcessRunConfig {
             shell,
             cmd: cmd.to_string(),
+            remap_paths: None,
+            remap_ids: None,
         }));
         run.build_command(&ctx).expect("command builds").cmd
     }

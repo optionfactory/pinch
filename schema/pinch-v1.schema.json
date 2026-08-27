@@ -346,6 +346,20 @@
               "description": "The command string to execute.",
               "type": "string"
             },
+            "remap_ids": {
+              "description": "Id swaps `docker-bluff` applies, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). Setting it runs the command under docker-bluff so mounted files are owned correctly on both sides.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "remap_paths": {
+              "description": "Directories to remap through `docker-bluff` (Linux idmapped mounts), one per `--map` (`SRC[:DST]`, supports variable expansion), so a container-style UID and the host each see the mounted files as their own. Requires `remap_ids`.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
             "shell": {
               "description": "If present, executes commands using the configed shell '-c' option.",
               "$ref": "#/$defs/WrappingShell"
@@ -415,6 +429,13 @@
                 "type": "string"
               }
             },
+            "remap_ids": {
+              "description": "Id swaps `docker-bluff` applies to the container's bind mounts, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). When set, `docker run` is launched under docker-bluff so its `-v`/`--mount` sources are idmapped. (There is no `remap_paths` for `type: docker` — docker-bluff discovers the run's mounts itself.)",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
             "type": {
               "type": "string",
               "const": "docker"
@@ -448,6 +469,20 @@
             "network": {
               "description": "Target Docker network name (optional if exactly one network is defined in `docker_networks`).",
               "type": "string"
+            },
+            "remap_ids": {
+              "description": "Id swaps `docker-bluff` applies, one per `--id` (e.g. `me:0`, `u:0:33`, `g:0:33`; `me` resolves to the invoking user's uid/gid). Setting it runs the command under docker-bluff so mounted files are owned correctly on both sides.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "remap_paths": {
+              "description": "Directories to remap through `docker-bluff` (Linux idmapped mounts), one per `--map` (`SRC[:DST]`, supports variable expansion), so a container-style UID and the host each see the mounted files as their own. Requires `remap_ids`.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             },
             "shell": {
               "description": "If present, executes commands using the configed shell '-c' option.",

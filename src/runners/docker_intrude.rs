@@ -1,5 +1,5 @@
 use crate::config::RunMode;
-use crate::runners::{BuildOutput, BuildResult, RunBuilder, RunContext, parse_command_string};
+use crate::runners::{BuildOutput, BuildResult, RunBuilder, RunContext, parse_command_string, wrap_with_docker_bluff};
 use crate::vars::apply_vars;
 
 impl RunBuilder for crate::config::DockerIntrudeRunConfig {
@@ -44,9 +44,16 @@ impl RunBuilder for crate::config::DockerIntrudeRunConfig {
         let expanded_cmd = apply_vars(self.cmd.trim(), ctx.vars);
         let tokens = parse_command_string(&expanded_cmd, self.shell.or(ctx.global_shell), ctx.name)?;
         cmd_vec.extend(tokens);
+        let cmd = wrap_with_docker_bluff(
+            cmd_vec,
+            self.remap_ids.as_deref(),
+            self.remap_paths.as_deref(),
+            ctx.vars,
+            ctx.name,
+        )?;
 
         Ok(BuildOutput {
-            cmd: cmd_vec,
+            cmd,
             run_mode: if ctx.background { RunMode::Spawn } else { RunMode::Exec },
             container: None,
         })
