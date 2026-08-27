@@ -29,6 +29,9 @@ fn render_mount(mount: &DockerMountConfig, vars: &HashMap<String, String>) -> Op
     if mount.readonly.unwrap_or(true) {
         flag.push_str(",readonly");
     }
+    if mount.create.unwrap_or(false) {
+        flag.push_str(",bind-create-src");
+    }
     let extras: Vec<String> = mount
         .opts
         .as_deref()
@@ -46,6 +49,27 @@ fn render_mount(mount: &DockerMountConfig, vars: &HashMap<String, String>) -> Op
     Some(flag)
 }
 
+/// `create: true` renders the `bind-create-src` mount option, which only makes
+/// sense for a bind mount.
+fn validate_create(mount: &DockerMountConfig, name: &str) -> Result<(), String> {
+    if !mount.create.unwrap_or(false) {
+        return Ok(());
+    }
+    let mount_type = mount
+        .mount_type
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .unwrap_or("bind");
+    if mount_type != "bind" {
+        return Err(format!(
+            "Mount '{}' of '{}' has create: true, which is only supported for type bind (got '{}')",
+            mount.source, name, mount_type
+        ));
+    }
+    Ok(())
+}
+
 impl DockerRunConfig {
     fn engine_binary(&self) -> &'static str {
         match self.engine {
@@ -58,7 +82,8 @@ impl DockerRunConfig {
 fn shlex_tokens(value: &str, vars: &HashMap<String, String>, name: &str) -> Result<Vec<String>, String> {
     // `shlex::split` only fails on malformed quoting; an empty string (e.g. a
     // conditional var that expanded to nothing) yields no tokens and is fine.
-    shlex::split(&expand(value, vars)).ok_or_else(|| format!("Failed to parse docker run flags for '{}': {}", name, value))
+    shlex::split(&expand(value, vars))
+        .ok_or_else(|| format!("Failed to parse docker run flags for '{}': {}", name, value))
 }
 
 impl RunBuilder for DockerRunConfig {
@@ -84,7 +109,10 @@ impl RunBuilder for DockerRunConfig {
         tokens.push(container_name.clone());
         // Same defaulting as 'docker-intrude': fall back to the single network
         // defined in 'docker_networks' when no explicit network is configured.
-        let network = self.network.as_deref().or(ctx.default_docker_network.map(String::as_str));
+        let network = self
+            .network
+            .as_deref()
+            .or(ctx.default_docker_network.map(String::as_str));
         if let Some(network) = network {
             let expanded = expand(network, ctx.vars);
             if !expanded.is_empty() {
@@ -113,6 +141,7 @@ impl RunBuilder for DockerRunConfig {
             }
         }
         for mount in self.mounts.iter().flatten() {
+            validate_create(mount, ctx.name)?;
             if let Some(flag) = render_mount(mount, ctx.vars) {
                 tokens.push("--mount".to_string());
                 tokens.push(flag);
@@ -132,13 +161,7 @@ impl RunBuilder for DockerRunConfig {
         if let Some(args) = &self.args {
             tokens.extend(shlex_tokens(args, ctx.vars, ctx.name)?);
         }
-        let cmd = wrap_with_docker_bluff(
-            tokens,
-            self.remap_ids.as_deref(),
-            None,
-            ctx.vars,
-            ctx.name,
-        )?;
+        let cmd = wrap_with_docker_bluff(tokens, self.remap_ids.as_deref(), None, ctx.vars, ctx.name)?;
 
         Ok(BuildOutput {
             cmd,
@@ -183,14 +206,27 @@ mod tests {
         };
         let cfg = docker_cfg(r#"{ "image": "i" }"#);
         let out = cfg.build_command(&context).unwrap().cmd;
-        assert_eq!(out, vec!["docker", "run", "-ti", "--rm", "--name", "test", "--network", "hi", "i"]);
+        assert_eq!(
+            out,
+            vec!["docker", "run", "-ti", "--rm", "--name", "test", "--network", "hi", "i"]
+        );
 
         // An explicit network takes precedence over the default.
         let cfg = docker_cfg(r#"{ "image": "i", "network": "other" }"#);
         let out = cfg.build_command(&context).unwrap().cmd;
         assert_eq!(
             out,
-            vec!["docker", "run", "-ti", "--rm", "--name", "test", "--network", "other", "i"]
+            vec![
+                "docker",
+                "run",
+                "-ti",
+                "--rm",
+                "--name",
+                "test",
+                "--network",
+                "other",
+                "i"
+            ]
         );
     }
 
@@ -279,11 +315,29 @@ mod tests {
         let out = cfg.build_command(&ctx(&vars)).unwrap();
         assert_eq!(
             out.cmd,
-            vec!["docker-bluff", "--id", "me:0", "--", "docker", "run", "-ti", "--rm", "--name", "test", "maven:3"]
+            vec![
+                "docker-bluff",
+                "--id",
+                "me:0",
+                "--",
+                "docker",
+                "run",
+                "-ti",
+                "--rm",
+                "--name",
+                "test",
+                "maven:3"
+            ]
         );
         // The container reference is still the docker container, so the supervisor
         // can stop it through the engine.
-        assert_eq!(out.container, Some(ContainerRef { engine: "docker".into(), name: "test".into() }));
+        assert_eq!(
+            out.container,
+            Some(ContainerRef {
+                engine: "docker".into(),
+                name: "test".into()
+            })
+        );
     }
 
     #[test]
@@ -291,11 +345,23 @@ mod tests {
         let vars = HashMap::new();
         let cfg = docker_cfg(r#"{ "image": "i" }"#);
         let out = cfg.build_command(&ctx(&vars)).unwrap();
-        assert_eq!(out.container, Some(ContainerRef { engine: "docker".into(), name: "test".into() }));
+        assert_eq!(
+            out.container,
+            Some(ContainerRef {
+                engine: "docker".into(),
+                name: "test".into()
+            })
+        );
 
         let cfg = docker_cfg(r#"{ "engine": "podman", "image": "i", "name": "custom" }"#);
         let out = cfg.build_command(&ctx(&vars)).unwrap();
-        assert_eq!(out.container, Some(ContainerRef { engine: "podman".into(), name: "custom".into() }));
+        assert_eq!(
+            out.container,
+            Some(ContainerRef {
+                engine: "podman".into(),
+                name: "custom".into()
+            })
+        );
     }
 
     #[test]
@@ -371,6 +437,42 @@ mod tests {
             out.contains(&"type=bind,source=/opt/my app/nginx.conf,target=/opt/my app/nginx.conf,readonly".to_string())
         );
         assert!(out.contains(&"hello world:/data".to_string()));
+    }
+
+    #[test]
+    fn create_renders_bind_create_src_option() {
+        let vars = HashMap::new();
+        let m = serde_json::from_str::<DockerMountConfig>(
+            r#"{ "source": "/data", "readonly": false, "create": true, "opts": "bind-propagation=rshared" }"#,
+        )
+        .unwrap();
+        assert_eq!(
+            render_mount(&m, &vars).unwrap(),
+            "type=bind,source=/data,target=/data,bind-create-src,bind-propagation=rshared"
+        );
+        let m = serde_json::from_str::<DockerMountConfig>(r#"{ "source": "/data", "create": false }"#).unwrap();
+        assert_eq!(
+            render_mount(&m, &vars).unwrap(),
+            "type=bind,source=/data,target=/data,readonly"
+        );
+    }
+
+    #[test]
+    fn create_requires_bind_type() {
+        let vars = HashMap::new();
+
+        let cfg = docker_cfg(
+            r#"{ "image": "i", "mounts": [ { "type": "volume", "source": "data", "target": "/data", "create": true } ] }"#,
+        );
+        let err = cfg.build_command(&ctx(&vars)).unwrap_err();
+        assert!(err.contains("only supported for type bind"), "{err}");
+
+        let cfg = docker_cfg(r#"{ "image": "i", "mounts": [ { "source": "/data", "create": true } ] }"#);
+        let out = cfg.build_command(&ctx(&vars)).unwrap().cmd;
+        assert!(
+            out.contains(&"type=bind,source=/data,target=/data,readonly,bind-create-src".to_string()),
+            "{out:?}"
+        );
     }
 
     #[test]

@@ -317,7 +317,7 @@ Each item under `processes` defines a process to supervise:
      * `network`, `ip`: Rendered as `--network`/`--ip`; empty values are ignored (enabling conditionals that yield empty strings). If `network` is omitted and exactly one network is defined in `docker_networks`, that network is used automatically (same as `docker-intrude`).
      * `env`: A `KEY: value` mapping, rendered as `--env`.
      * `publish`: A list rendered as `-p`; empty entries are ignored.
-     * `mounts`: A list rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,<opts>]`. Each entry supports `type` (default `bind`), `source` (mandatory), `target` (defaults to `source`), `readonly` (default `true`), and `opts` (comma-separated extra mount options appended verbatim, e.g. `bind-propagation=rshared`).
+     * `mounts`: A list rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,<opts>]`. Each entry supports `type` (default `bind`), `source` (mandatory), `target` (defaults to `source`), `readonly` (default `true`), `create` (default `false`: create the bind source directory on the host when it is missing, rendered as the `bind-create-src` option; docker 29+ creates it owned by root, while with `remap_ids` `docker-bluff` creates it owned by you), and `opts` (comma-separated extra mount options appended verbatim, e.g. `bind-propagation=rshared`).
      * `volumes`: A list rendered as `--volume`; empty entries are ignored.
      * `opts`: Raw flags appended verbatim after the rendered ones (e.g. `--name`, `--privileged`).
      * `args`: Arguments passed to the container entrypoint.

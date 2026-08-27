@@ -91,6 +91,10 @@
       "description": "Configuration for a single container mount.",
       "type": "object",
       "properties": {
+        "create": {
+          "description": "Create the bind source directory (and missing parents) on the host when it does not exist (default `false`). Rendered as the `bind-create-src` mount option: docker (29+) creates it owned by root; with `remap_ids`, `docker-bluff` creates it owned by the invoking user instead. Only for `type: bind`.",
+          "type": "boolean"
+        },
         "opts": {
           "description": "Comma-separated extra mount options appended verbatim (e.g., `bind-propagation=rshared`).",
           "type": "string"
@@ -403,7 +407,7 @@
               "type": "string"
             },
             "mounts": {
-              "description": "Mounts attached to the container (rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,<opts>]`).",
+              "description": "Mounts attached to the container (rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,bind-create-src][,<opts>]`).",
               "type": "array",
               "items": {
                 "$ref": "#/$defs/DockerMountConfig"

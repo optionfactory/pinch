@@ -223,7 +223,7 @@ pub struct DockerRunConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<String>")]
     pub publish: Option<Vec<String>>,
-    #[doc = "Mounts attached to the container (rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,<opts>]`)."]
+    #[doc = "Mounts attached to the container (rendered as `--mount type=<type>,source=<source>,target=<target>[,readonly][,bind-create-src][,<opts>]`)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Vec<DockerMountConfig>")]
     pub mounts: Option<Vec<DockerMountConfig>>,
@@ -255,6 +255,10 @@ pub struct DockerMountConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "bool")]
     pub readonly: Option<bool>,
+    #[doc = "Create the bind source directory (and missing parents) on the host when it does not exist (default `false`). Rendered as the `bind-create-src` mount option: docker (29+) creates it owned by root; with `remap_ids`, `docker-bluff` creates it owned by the invoking user instead. Only for `type: bind`."]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(with = "bool")]
+    pub create: Option<bool>,
     #[doc = "Comma-separated extra mount options appended verbatim (e.g., `bind-propagation=rshared`)."]
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(with = "String")]
