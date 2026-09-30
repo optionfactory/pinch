@@ -42,7 +42,16 @@ When using `type: "docker"` or `type: "docker-intrude"`, Pinch passes configured
 
 ## Installation
 
-### 1. Pre-built Binaries (Linux)
+### 1. Packages (Debian/Ubuntu, Fedora/RHEL, openSUSE)
+Set up the [optionfactory package repository](https://github.com/optionfactory/linux-packages#setup) once (the commands also work unattended, in scripts and Dockerfiles), then:
+
+```bash
+sudo apt install pinch   # or: sudo dnf install pinch
+```
+
+The same repository provides `docker-intrude` and `docker-bluff` (see the notes below).
+
+### 2. Pre-built Binaries (Linux)
 Download the latest statically-linked musl executable directly from the GitHub Releases page, or install it via `curl`:
 
 ```bash
@@ -58,7 +67,7 @@ curl -sSL \
 
 > **Note:** When it runs privileged, `docker-bluff` resolves the program it launches against a fixed secure `PATH` (`/usr/local/bin`, `/usr/bin`, `/bin`, ...), **not** your shell's `PATH`. So a bare `cmd: "mvn"` may resolve to a different binary, or not be found, if it lives somewhere like `~/.local/bin`. Give an absolute path, or run it via `shell: bash` (the shell then resolves the inner command against your inherited `PATH`).
 
-### 2. Build from Source
+### 3. Build from Source
 Ensure you have the Rust toolchain installed, then clone the repository and build:
 
 ```bash
