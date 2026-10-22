@@ -76,6 +76,8 @@ cd pinch
 make build-release install
 ```
 
+`make install` copies the binary to `/usr/local/bin/pinch`, which comes before the packaged `/usr/bin/pinch` in `PATH`. Run `make uninstall` when you are done with the local build, or package upgrades will stay hidden behind it.
+
 ## Usage Overview
 
 Pinch uses a structured subcommand hierarchy and global option flags. Global flags can be passed anywhere in your command string.

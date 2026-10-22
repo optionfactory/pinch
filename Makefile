@@ -13,6 +13,11 @@ run:
 
 install:
 	@sudo cp target/x86_64-unknown-linux-musl/release/pinch /usr/local/bin/pinch
+	@echo "installed /usr/local/bin/pinch (overrides the pinch package; make uninstall to revert)"
+
+uninstall:
+	@sudo rm -f /usr/local/bin/pinch
+	@echo "removed /usr/local/bin/pinch"
 
 clean:
 	-@rm -rf target/
