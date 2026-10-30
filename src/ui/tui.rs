@@ -3,10 +3,13 @@ use crate::supervisor::{self, Supervisor, SupervisorEvent};
 use crate::ui::terminal::TerminalGuard;
 use crossterm::event::EventStream;
 use futures::StreamExt;
+use std::io::Write;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::mpsc;
 use tokio::time::{Duration, interval};
+
+const TERMINATION_SIGNAL: &str = "SIGINT/SIGTERM/SIGHUP received";
 
 /// Orchestrates the TUI event loop, supervisor execution, and background task lifecycle.
 pub async fn run_tui(config: PinchConfig) -> Result<(), Box<dyn std::error::Error>> {
@@ -24,16 +27,18 @@ pub async fn run_tui(config: PinchConfig) -> Result<(), Box<dyn std::error::Erro
     let tx_signal = tx_ui.clone();
     let signal_handle = tokio::spawn(async move {
         use tokio::signal::unix::{SignalKind, signal};
-        let mut sigterm = match signal(SignalKind::terminate()) {
-            Ok(s) => s,
-            Err(_) => return,
+        let (Ok(mut sigterm), Ok(mut sighup)) = (signal(SignalKind::terminate()), signal(SignalKind::hangup())) else {
+            return;
         };
+        // SIGHUP is the terminal window closing: stop the processes as on quit,
+        // or the ones that ignore a hangup outlive pinch.
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {}
             _ = sigterm.recv() => {}
+            _ = sighup.recv() => {}
         }
         let _ = tx_signal
-            .send(SupervisorEvent::Error("SIGINT/SIGTERM received".to_string()))
+            .send(SupervisorEvent::Error(TERMINATION_SIGNAL.to_string()))
             .await;
     });
     let tx_input = tx_ui.clone();
@@ -82,14 +87,16 @@ pub async fn run_tui(config: PinchConfig) -> Result<(), Box<dyn std::error::Erro
     drop(guard);
     // inform user on standard stdout while child processes drain
     if !shutdown_handles.is_empty() {
-        println!("Pinch: Waiting for child processes to terminate...");
+        // Not println!: after a SIGHUP the terminal is gone, and its panic would
+        // abandon the processes still terminating.
+        let _ = writeln!(std::io::stdout(), "Pinch: Waiting for child processes to terminate...");
         for handle in shutdown_handles {
             let _ = handle.await;
         }
     }
     let _ = watcher_handle.await;
     if let Err(err) = run_result {
-        if err != "SIGINT/SIGTERM received" {
+        if err != TERMINATION_SIGNAL {
             eprintln!("\n[Pinch Error]: {}", err);
             std::process::exit(1);
         }
