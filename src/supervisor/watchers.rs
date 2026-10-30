@@ -21,10 +21,10 @@ pub fn start_watcher(
     let (watch_tx, mut watch_rx) = tokio::sync::mpsc::channel(1024);
     let mut watcher = RecommendedWatcher::new(
         move |res: notify::Result<notify::Event>| {
-            if let Ok(event) = res {
-                if event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove() {
-                    let _ = watch_tx.try_send(event);
-                }
+            if let Ok(event) = res
+                && (event.kind.is_modify() || event.kind.is_create() || event.kind.is_remove())
+            {
+                let _ = watch_tx.try_send(event);
             }
         },
         Config::default(),

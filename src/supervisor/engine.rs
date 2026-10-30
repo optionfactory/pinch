@@ -147,26 +147,26 @@ impl Supervisor {
             ..
         } = self.state;
         for geo in cached_geometries {
-            if let crate::ui::layouts::PaneTarget::Process(proc_id) = geo.target {
-                if let Some(pane) = panes.iter_mut().find(|p| p.id == proc_id) {
-                    let is_zoomed = zoomed_pane == Some(pane.id);
-                    let rows = geo.area.height.saturating_sub(2);
-                    let cols = if is_zoomed {
-                        geo.area.width
-                    } else {
-                        geo.area.width.saturating_sub(2)
-                    };
-                    if cols > 0 && rows > 0 && pane.last_size != Some((cols, rows)) {
-                        pane.last_size = Some((cols, rows));
-                        pane.parser.screen_mut().set_size(rows, cols);
-                        if let Some(master) = &pane.pty_master {
-                            let _ = master.resize(portable_pty::PtySize {
-                                rows,
-                                cols,
-                                pixel_width: 0,
-                                pixel_height: 0,
-                            });
-                        }
+            if let crate::ui::layouts::PaneTarget::Process(proc_id) = geo.target
+                && let Some(pane) = panes.iter_mut().find(|p| p.id == proc_id)
+            {
+                let is_zoomed = zoomed_pane == Some(pane.id);
+                let rows = geo.area.height.saturating_sub(2);
+                let cols = if is_zoomed {
+                    geo.area.width
+                } else {
+                    geo.area.width.saturating_sub(2)
+                };
+                if cols > 0 && rows > 0 && pane.last_size != Some((cols, rows)) {
+                    pane.last_size = Some((cols, rows));
+                    pane.parser.screen_mut().set_size(rows, cols);
+                    if let Some(master) = &pane.pty_master {
+                        let _ = master.resize(portable_pty::PtySize {
+                            rows,
+                            cols,
+                            pixel_width: 0,
+                            pixel_height: 0,
+                        });
                     }
                 }
             }
@@ -208,11 +208,11 @@ impl Supervisor {
             SupervisorEvent::SupervisorTick => {
                 let mut exited_ids = vec![];
                 for pane in &mut self.state.panes {
-                    if let Some(child) = &mut pane.child_process {
-                        if let Ok(Some(exit_status)) = child.try_wait() {
-                            let success = exit_status.success();
-                            exited_ids.push((pane.id, success));
-                        }
+                    if let Some(child) = &mut pane.child_process
+                        && let Ok(Some(exit_status)) = child.try_wait()
+                    {
+                        let success = exit_status.success();
+                        exited_ids.push((pane.id, success));
                     }
                 }
                 for (id, success) in exited_ids {
@@ -246,18 +246,18 @@ impl Supervisor {
             UserAction::RestartProcess(id) => self.restart_process(id),
             UserAction::ToggleZoom(id) => self.state.toggle_zoom(id),
             UserAction::OpenLink(id) => {
-                if let Some(pane) = self.state.panes.iter().find(|p| p.id == id) {
-                    if let Some(link) = pane.config.link.clone() {
-                        let url = if link.starts_with("http://") || link.starts_with("https://") {
-                            link
-                        } else if !link.contains("://") {
-                            format!("https://{}", link)
-                        } else {
-                            // reject non-web URL schemes
-                            return;
-                        };
-                        let _ = open::that(&url);
-                    }
+                if let Some(pane) = self.state.panes.iter().find(|p| p.id == id)
+                    && let Some(link) = pane.config.link.clone()
+                {
+                    let url = if link.starts_with("http://") || link.starts_with("https://") {
+                        link
+                    } else if !link.contains("://") {
+                        format!("https://{}", link)
+                    } else {
+                        // reject non-web URL schemes
+                        return;
+                    };
+                    let _ = open::that(&url);
                 }
             }
             UserAction::NextTab => {

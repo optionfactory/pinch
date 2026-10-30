@@ -1,6 +1,6 @@
-mod schema;
+mod manifest;
 
-pub use schema::*;
+pub use manifest::*;
 
 #[cfg(test)]
 mod tests {
@@ -67,7 +67,10 @@ mod tests {
         }"#,
         );
         let run = &m.processes.as_ref().unwrap()[0].run;
-        let RunManifest::Detailed(RunKind::Docker(cfg)) = run else {
+        let RunManifest::Detailed(kind) = run else {
+            panic!("expected detailed run config");
+        };
+        let RunKind::Docker(cfg) = kind.as_ref() else {
             panic!("expected docker run config");
         };
         assert_eq!(cfg.engine, Some(ContainerEngine::Podman));

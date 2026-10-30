@@ -85,12 +85,11 @@ impl LineSplitter {
                 continue;
             }
             let mut split_index = self.pending.len();
-            if byte != b'\n' {
-                if let Err(e) = std::str::from_utf8(&self.pending) {
-                    if e.error_len().is_none() {
-                        split_index = e.valid_up_to();
-                    }
-                }
+            if byte != b'\n'
+                && let Err(e) = std::str::from_utf8(&self.pending)
+                && e.error_len().is_none()
+            {
+                split_index = e.valid_up_to();
             }
             if split_index > 0 {
                 lines.push(String::from_utf8_lossy(&self.pending[..split_index]).trim_end().to_string());

@@ -140,7 +140,7 @@ pub enum RunManifest {
     #[doc = "Simple shell command string executed as a local OS process."]
     Shorthand(String),
     #[doc = "Explicit execution configuration specifying process type (`process`, `docker`, or `docker-intrude`)."]
-    Detailed(RunKind),
+    Detailed(Box<RunKind>),
 }
 
 #[doc = "Explicit runtime environment type for a supervised process."]

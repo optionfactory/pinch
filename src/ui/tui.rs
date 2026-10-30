@@ -95,11 +95,11 @@ pub async fn run_tui(config: PinchConfig) -> Result<(), Box<dyn std::error::Erro
         }
     }
     let _ = watcher_handle.await;
-    if let Err(err) = run_result {
-        if err != TERMINATION_SIGNAL {
-            eprintln!("\n[Pinch Error]: {}", err);
-            std::process::exit(1);
-        }
+    if let Err(err) = run_result
+        && err != TERMINATION_SIGNAL
+    {
+        eprintln!("\n[Pinch Error]: {}", err);
+        std::process::exit(1);
     }
     Ok(())
 }

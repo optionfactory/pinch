@@ -41,12 +41,12 @@ mod tests {
             defined_networks: &networks,
             background: false,
         };
-        let run = RunManifest::Detailed(RunKind::Process(ProcessRunConfig {
+        let run = RunManifest::Detailed(Box::new(RunKind::Process(ProcessRunConfig {
             shell,
             cmd: cmd.to_string(),
             remap_paths: None,
             remap_ids: None,
-        }));
+        })));
         run.build_command(&ctx).expect("command builds").cmd
     }
 

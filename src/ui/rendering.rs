@@ -62,39 +62,6 @@ fn wrapped_row_count(line_width: usize, inner_width: usize) -> usize {
     line_width.div_ceil(inner_width).max(1)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn short_lines_take_one_row_each() {
-        let start = Viewport::wrapped_tail_start(&[10, 10, 10], 3, 40);
-        assert_eq!(start, 0);
-    }
-
-    #[test]
-    fn wrapped_last_line_stays_visible() {
-        // 3 lines of width 80 in a 40-wide pane: the last line wraps to 2 rows.
-        // With naive line counting, height 3 would show all; with wrapped
-        // counting (2+1+1 = 4 rows > 3), the first line is dropped so the
-        // wrapped tail fits and remains fully visible.
-        let start = Viewport::wrapped_tail_start(&[80, 40, 80], 3, 40);
-        assert_eq!(start, 1);
-    }
-
-    #[test]
-    fn zero_height_shows_nothing() {
-        let start = Viewport::wrapped_tail_start(&[10, 10], 0, 40);
-        assert_eq!(start, 2);
-    }
-
-    #[test]
-    fn zero_width_lines_count_as_one_row() {
-        let start = Viewport::wrapped_tail_start(&[0, 0, 0], 2, 40);
-        assert_eq!(start, 1);
-    }
-}
-
 const COLOR_BORDER_ACTIVE: Color = Color::Rgb(122, 162, 247); // Electric Blue
 const COLOR_BORDER_INACTIVE: Color = Color::Rgb(86, 95, 137); // Dim Gray
 const COLOR_HEADER_BG: Color = Color::Rgb(45, 63, 118); // Deep Navy
@@ -386,4 +353,37 @@ pub fn draw(state: &DashboardState, frame: &mut Frame) {
     }
 
     draw_footer(state, frame, footer_area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn short_lines_take_one_row_each() {
+        let start = Viewport::wrapped_tail_start(&[10, 10, 10], 3, 40);
+        assert_eq!(start, 0);
+    }
+
+    #[test]
+    fn wrapped_last_line_stays_visible() {
+        // 3 lines of width 80 in a 40-wide pane: the last line wraps to 2 rows.
+        // With naive line counting, height 3 would show all; with wrapped
+        // counting (2+1+1 = 4 rows > 3), the first line is dropped so the
+        // wrapped tail fits and remains fully visible.
+        let start = Viewport::wrapped_tail_start(&[80, 40, 80], 3, 40);
+        assert_eq!(start, 1);
+    }
+
+    #[test]
+    fn zero_height_shows_nothing() {
+        let start = Viewport::wrapped_tail_start(&[10, 10], 0, 40);
+        assert_eq!(start, 2);
+    }
+
+    #[test]
+    fn zero_width_lines_count_as_one_row() {
+        let start = Viewport::wrapped_tail_start(&[0, 0, 0], 2, 40);
+        assert_eq!(start, 1);
+    }
 }

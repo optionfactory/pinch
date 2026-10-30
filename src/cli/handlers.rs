@@ -112,7 +112,9 @@ fn used_containers(
     let mut images = BTreeSet::new();
     if let Some(processes) = &manifest.processes {
         for proc in processes {
-            if let crate::config::RunManifest::Detailed(crate::config::RunKind::Docker(ref docker_cfg)) = proc.run {
+            if let crate::config::RunManifest::Detailed(ref kind) = proc.run
+                && let crate::config::RunKind::Docker(ref docker_cfg) = **kind
+            {
                 let resolved_image = apply_vars(&docker_cfg.image, context_vars);
                 images.insert(resolved_image);
             }

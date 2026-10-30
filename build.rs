@@ -6,11 +6,11 @@ use std::io::Write;
 
 use schemars::generate::SchemaSettings;
 
-#[path = "src/schema/schema.rs"]
-mod schema;
+#[path = "src/schema/manifest.rs"]
+mod manifest;
 
 fn main() {
-    println!("cargo:rerun-if-changed=src/schema/schema.rs");
+    println!("cargo:rerun-if-changed=src/schema/manifest.rs");
     println!("cargo:rerun-if-changed=Cargo.toml");
 
     let full_version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "1.0.0".to_string());
@@ -20,7 +20,7 @@ fn main() {
     let settings = SchemaSettings::default();
     let generator = settings.into_generator();
 
-    let schema = generator.into_root_schema_for::<schema::PinchManifest>();
+    let schema = generator.into_root_schema_for::<manifest::PinchManifest>();
 
     let schema_json = serde_json::to_string_pretty(&schema).unwrap();
 
